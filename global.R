@@ -1,6 +1,8 @@
 library(httr)
 library(DBI)
+library(dplyr)
 
+source("secrets.R")
 source("loginAPI.R")
 
 
