@@ -36,7 +36,17 @@ user_base <-
 
 get_expunits <- function(contracts) {
   res <- tbl(craft_con, "expunitids_view") %>% 
-    inner_join(tbl(craft_con, "contracts") %>% select(contract, year))
+    inner_join(tbl(craft_con, "contracts") %>% select(contract, year)) %>% 
+    left_join(
+      tbl(craft_con, "rootstocks") %>% 
+        rename(rlabel = label) %>% 
+        select(-uid)
+    ) %>% 
+    left_join(
+      tbl(craft_con, "scions") %>% 
+        rename(slabel = label) %>% 
+        select(-uid)
+    )
   
   if (length(contracts)) {
     res <- filter(res, contract %in% contracts) 
@@ -52,7 +62,7 @@ get_expunits <- function(contracts) {
     # mutate(centroid = centroid + runif(nrow(.), min = 0.008, max = 0.008)) %>% 
     st_as_sf(crs = 4326) %>% 
     st_zm()
-
+  
 }
 
 
@@ -73,54 +83,63 @@ make_map <- function(plots) {
     hideGroup("plots")
 }
 
-make_pie <- function(dat, col) {
-
-    dat %>%
-      group_by({{col}}) %>%
-      summarize(acres = round(sum(area_acres))) %>%
-      arrange(-acres) %>% 
-      mutate(rn = row_number()) %>% 
-      mutate(
-        col = replace({{col}}, rn > 5, "Others"),
-        rn = replace(rn, rn > 5, 6)
-      ) %>% 
-      group_by(col, rn) %>%
-      summarize(acres = round(sum(acres))) %>%
-      plot_ly(
-        labels = ~col, values = ~acres,
-        type = "pie",
-        showlegend = F
-      ) %>%
-      layout(
-        xaxis = list(visible = F, showgrid = F, title = ""),
-        yaxis = list(visible = F, showgrid = F, title = ""),
-        hovermode = "x",
-        margin = list(t = 0, r = 0, l = 0, b = 0),
-        font = list(color = "white"),
-        paper_bgcolor = "transparent",
-        plot_bgcolor = "transparent"
-      ) %>%
-      config(displayModeBar = F)
-
+make_pie <- function(dat, col_id) {
+  #browser()
+  d = dat %>%
+    group_by({{col_id}}) %>%
+    summarize(acres = round(sum(area_acres)), .groups = "drop") %>%
+    arrange(-acres) %>% 
+    mutate(rn = row_number()) %>% 
+    mutate(
+      col = replace({{col_id}}, rn > 5, "Others"),
+      rn = replace(rn, rn > 5, 6),
+      col = forcats::fct_reorder(col, -acres),
+      col = forcats::fct_relevel(col, "Others", after = Inf) %>% 
+        forcats::fct_rev(),
+    ) %>% 
+    group_by(col, rn) %>%
+    summarize(acres = round(sum(acres)), .groups = "drop")
+  
+  d %>% 
+    plot_ly(
+      labels = ~col, values = ~acres, 
+      type = "pie",
+      marker = list(colors = scales::brewer_pal(palette = "Set3")(n_groups(d))),
+      showlegend = F
+    ) %>%
+    layout(
+      xaxis = list(visible = F, showgrid = F, title = ""),
+      yaxis = list(visible = F, showgrid = F, title = ""),
+      hovermode = "x",
+      margin = list(t = 0, r = 0, l = 0, b = 0),
+      font = list(color = "white"),
+      paper_bgcolor = "transparent",
+      plot_bgcolor = "transparent"
+    ) %>%
+    config(displayModeBar = F)
+  
 }
 
 make_bar <- function(dat, col) {
   
   dat %>%
     group_by({{col}}) %>%
-    summarize(acres = round(sum(area_acres))) %>%
+    summarize(acres = round(sum(area_acres)), .groups = "drop") %>%
     arrange(-acres) %>% 
     mutate(rn = row_number()) %>% 
     mutate(
       col = replace({{col}}, rn > 5, "Others"),
-      rn = replace(rn, rn > 5, 6)
+      rn = replace(rn, rn > 5, 6),
+      col = forcats::fct_reorder(col, -acres),
+      col = forcats::fct_relevel(col, "Others", after = Inf) %>% 
+        forcats::fct_rev()
     ) %>% 
     group_by(col, rn) %>%
-    summarize(acres = round(sum(acres))) %>%
+    summarize(acres = round(sum(acres)), .groups = "drop") %>%
     arrange(rn) %>% 
     plot_ly(hoverinfo = "text") %>% 
     add_bars(
-      x = ~acres, y = ~col, color = ~col,
+      x = ~acres, y = ~col, color = ~col, colors = "Set3", 
       text = ~paste0(col, ": ", acres),
       type = "bar",
       orientation = 'h',

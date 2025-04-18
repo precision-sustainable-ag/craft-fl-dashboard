@@ -27,31 +27,24 @@ library(bslib)
 # )
 
 vbs <- list(
-  value_box(
-    "Total acres planted",
+  "acres_total" = value_box(
+    "Total groves planted",
     value = textOutput("acres_total"),
     theme = "primary",
     showcase = icon("seedling")
   ),
-  value_box(
+  "acres_years" = value_box(
     "Enrollment over time",
     value = textOutput("acres_years_avg"),
     theme = "secondary",
     showcase = plotlyOutput("acres_years")
   ),
-  card(
+  "rootstocks" = card(
     plotlyOutput("rootstocks_pie")
   ),
-  card(
+  "scions" = card(
     plotlyOutput("scions_pie")
   )
-  # value_box(
-  #   "Popular rootstocks",
-  #   value = textOutput("top_rootstock"),
-  #   theme = "secondary",
-  #   showcase = plotlyOutput("rootstocks_pie"),
-  #   showcase_layout = "top right"
-  # )
 )
 
 ui <- page_sidebar(
@@ -74,10 +67,24 @@ ui <- page_sidebar(
     open = F,
     width = 350
   ),
-  layout_column_wrap(
-    !!!vbs
-  ),
-  leafletOutput("map")
+  layout_columns(
+    col_widths = c(8, 4),
+    layout_column_wrap(
+      layout_column_wrap(vbs[["acres_total"]], vbs[["acres_years"]]),
+      leafletOutput("map"),
+      heights_equal = "row",
+      width = 1
+    ),
+    layout_column_wrap(
+      width = 1,
+      heights_equal = "row",
+      vbs[["rootstocks"]], vbs[["scions"]]
+    )
+  )
+  # layout_column_wrap(
+  #   !!!vbs
+  # ),
+  # leafletOutput("map")
   # fluidRow(
   #   column(6, uiOutput("submissions")),
   # )

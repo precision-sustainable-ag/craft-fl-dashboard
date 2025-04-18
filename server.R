@@ -120,7 +120,8 @@ server <- function(input, output, session) {
       pull(area_acres) %>% 
       sum() %>% 
       round() %>% 
-      scales::label_comma()(.)
+      scales::label_comma()(.) %>% 
+      paste("acres")
   })
   
   output$acres_years_avg <- renderText({
@@ -128,7 +129,7 @@ server <- function(input, output, session) {
     
     plots_for_summary() %>%
       group_by(year) %>%
-      summarize(acres = sum(area_acres)) %>% 
+      summarize(acres = sum(area_acres), .groups = "drop") %>% 
       pull(acres) %>% 
       mean() %>% 
       round() %>% 
@@ -141,7 +142,7 @@ server <- function(input, output, session) {
     
     plots_for_summary() %>%
       group_by(year) %>%
-      summarize(acres = round(sum(area_acres))) %>%
+      summarize(acres = round(sum(area_acres)), .groups = "drop") %>%
       arrange(year) %>% 
       plot_ly() %>%
       add_lines(
@@ -166,13 +167,13 @@ server <- function(input, output, session) {
   output$rootstocks_pie <- renderPlotly({
     req(plots_for_summary())
     
-    make_pie(plots_for_summary(), rootstock)
+    make_pie(plots_for_summary(), rlabel)
   })
 
   output$scions_pie <- renderPlotly({
     req(plots_for_summary())
     
-    make_bar(plots_for_summary(), scion)
+    make_bar(plots_for_summary(), slabel)
   })
   
 
