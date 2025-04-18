@@ -3,6 +3,7 @@ library(DBI)
 library(sf)
 library(leaflet)
 library(dplyr)
+library(plotly)
 
 
 server <- function(input, output, session) {
@@ -63,17 +64,7 @@ server <- function(input, output, session) {
     eventReactive(
       1, #credentials()$user_auth,
       {
-        
-        tbl(craft_con, "expunitids_view") %>% 
-          # filter(contract %in% local(contracts_for_user())) %>% 
-          collect() %>% 
-          mutate(
-            centroid = st_as_sfc(centroid),
-            geometry = st_as_sfc(geometry)
-          ) %>% 
-          # mutate(centroid = centroid + runif(nrow(.), min = 0.008, max = 0.008)) %>% 
-          st_as_sf(crs = 4326) %>% 
-          st_zm()
+        get_expunits(NULL)
       }
     )
   
@@ -81,24 +72,11 @@ server <- function(input, output, session) {
   
   output$map =
     renderLeaflet({
-      leaflet(plots_for_user()) %>% 
-        addProviderTiles("OpenStreetMap.Mapnik") %>% 
-        addCircleMarkers(
-          lat = ~st_coordinates(centroid)[,2],
-          lng = ~st_coordinates(centroid)[,1],
-          popup = ~contract,
-          group = "centroids"
-        ) %>% 
-        addPolygons(
-          data = plots_for_user() %>% select(geometry), 
-          group = "plots"
-        ) %>% 
-        hideGroup("plots")
+      make_map(plots_for_user())
     })
   
   observeEvent(
     input$map_zoom, {
-      message("zoom: ", input$map_zoom)
       if (input$map_zoom > 14 & !credentials()$user_auth) {
         leafletProxy("map") %>%
           setView(input$map_center[["lng"]], input$map_center[["lat"]], 14)
@@ -118,41 +96,86 @@ server <- function(input, output, session) {
   
   plots_for_summary <- reactive({
     req(nrow(plots_for_user()))
-    #req(input$map_bounds)
     req(is.list(input$map_bounds))
-    # box_wkt = glue::glue_data(
-    #   input$map_bounds,
-    #   "BOX({west} {south}, {east} {north})"
-    # )
-    # SELECT * from expunitids where geometry && box_wkt
+
     ext = rev(unlist(input$map_bounds)) %>% 
       purrr::set_names(c("xmin", "ymin", "xmax", "ymax")) %>% 
       st_bbox() %>% 
       st_as_sfc() %>% 
       st_as_sf(crs = 4326)
 
-    #message(jsonlite::toJSON(input$map_bounds))
-    #message(jsonlite::toJSON(st_coordinates(ext)))
-    res <- plots_for_user() %>% 
-      st_filter(ext) %>% 
+    plots_for_user() %>% 
+      purrr::quietly(st_filter)(ext) %>% 
+      .[["result"]] %>% 
       st_drop_geometry() %>% 
       select(-matches("centroid"), -matches("geometry"))
-    #message("nrow: ", nrow(res))
-    res
   }) %>% 
     debounce(1000)
   
-  output$table <- renderTable({
-    req(plots_for_summary())
-    req(is.data.frame(plots_for_summary()))
 
-    tibble(n = nrow(plots_for_summary()))
-    # plots_for_summary() %>% 
-    #   group_by(rootstock) %>% 
-    #   summarise(acres = sum(area_acres)) %>% 
-    #   arrange(-acres) %>% 
-    #   slice(1:5)
-    })
+  output$acres_total <- renderText({
+    req(plots_for_summary())
+    
+    plots_for_summary() %>%
+      pull(area_acres) %>% 
+      sum() %>% 
+      round() %>% 
+      scales::label_comma()(.)
+  })
+  
+  output$acres_years_avg <- renderText({
+    req(plots_for_summary())
+    
+    plots_for_summary() %>%
+      group_by(year) %>%
+      summarize(acres = sum(area_acres)) %>% 
+      pull(acres) %>% 
+      mean() %>% 
+      round() %>% 
+      scales::label_comma()(.) %>% 
+      paste(., " acres planted per year on average")
+  })
+  
+  output$acres_years <- renderPlotly({
+    req(plots_for_summary())
+    
+    plots_for_summary() %>%
+      group_by(year) %>%
+      summarize(acres = round(sum(area_acres))) %>%
+      arrange(year) %>% 
+      plot_ly() %>%
+      add_lines(
+        x = ~year, y = ~acres,
+        color = I("white"), span = I(1),
+        fill = 'tozeroy', alpha = 0.2,
+        hovertemplate = "%{x}: <b>%{y:,}</b>ac<extra></extra>",
+        name = ""
+      ) %>%
+      layout(
+        xaxis = list(visible = F, showgrid = F, title = ""),
+        yaxis = list(visible = F, showgrid = F, title = ""),
+        hovermode = "x",
+        margin = list(t = 0, r = 0, l = 0, b = 0),
+        font = list(color = "white"),
+        paper_bgcolor = "transparent",
+        plot_bgcolor = "transparent"
+      ) %>%
+      config(displayModeBar = F)
+  })
+  
+  output$rootstocks_pie <- renderPlotly({
+    req(plots_for_summary())
+    
+    make_pie(plots_for_summary(), rootstock)
+  })
+
+  output$scions_pie <- renderPlotly({
+    req(plots_for_summary())
+    
+    make_bar(plots_for_summary(), scion)
+  })
+  
+
   
   payloads = eventReactive(
     input$contract_picker,
