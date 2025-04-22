@@ -36,8 +36,9 @@ vbs <- list(
   "acres_years" = value_box(
     "Enrollment over time",
     value = textOutput("acres_years_avg"),
-    theme = "secondary",
-    showcase = plotlyOutput("acres_years")
+    theme = "info",
+    showcase = plotlyOutput("acres_years"),
+    showcase_layout = "bottom"
   ),
   "rootstocks" = card(
     plotlyOutput("rootstocks_pie")
@@ -48,10 +49,12 @@ vbs <- list(
 )
 
 ui <- page_sidebar(
+  window_title = "CRaFT Data Dashboard",
   title = div(
     span("CRaFT Data Dashboard"),
-    span(input_dark_mode(id = "theme"), style = "padding-left: 20px;")
+    span(input_dark_mode(id = "theme"), style = "padding-left: 50px;")
     ),
+  theme = bs_theme(bootswatch = "flatly"),
   sidebar = sidebar(
     shinyauthr::loginUI(
       id = "login",

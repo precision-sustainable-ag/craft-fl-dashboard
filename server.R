@@ -148,7 +148,7 @@ server <- function(input, output, session) {
       add_lines(
         x = ~year, y = ~acres,
         color = I("white"), span = I(1),
-        fill = 'tozeroy', alpha = 0.2,
+        fill = 'tozeroy', alpha = 0.5,
         hovertemplate = "%{x}: <b>%{y:,}</b>ac<extra></extra>",
         name = ""
       ) %>%
@@ -173,7 +173,7 @@ server <- function(input, output, session) {
   output$scions_pie <- renderPlotly({
     req(plots_for_summary())
     
-    make_bar(plots_for_summary(), slabel)
+    make_bar(plots_for_summary(), slabel, input$theme)
   })
   
 

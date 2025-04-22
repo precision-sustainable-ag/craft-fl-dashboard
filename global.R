@@ -55,7 +55,7 @@ get_expunits <- function(contracts) {
   res %>% 
     collect() %>% 
     mutate(
-      centroid = st_as_sfc(centroid),
+      centroid = st_as_sfc(centroid) %>% round(3),
       geometry = st_as_sfc(geometry)
     ) %>% 
     filter(!st_is_empty(centroid)) %>% 
@@ -104,6 +104,8 @@ make_pie <- function(dat, col_id) {
     plot_ly(
       labels = ~col, values = ~acres, 
       type = "pie",
+      text = ~col,
+      hovertemplate = "%{value:,} acres<extra></extra>",
       marker = list(colors = scales::brewer_pal(palette = "Set3")(n_groups(d))),
       showlegend = F
     ) %>%
@@ -120,8 +122,8 @@ make_pie <- function(dat, col_id) {
   
 }
 
-make_bar <- function(dat, col) {
-  
+make_bar <- function(dat, col, theme) {
+  textcolor = if (theme == "dark") "white" else "black"
   dat %>%
     group_by({{col}}) %>%
     summarize(acres = round(sum(area_acres)), .groups = "drop") %>%
@@ -140,18 +142,21 @@ make_bar <- function(dat, col) {
     plot_ly(hoverinfo = "text") %>% 
     add_bars(
       x = ~acres, y = ~col, color = ~col, colors = "Set3", 
-      text = ~paste0(col, ": ", acres),
       type = "bar",
       orientation = 'h',
-      #hovertemplate = '%{y}: %{x}<extra></extra>',
       showlegend = F
     ) %>%
+    add_text(
+      x = 0, y = ~col, 
+      text = ~paste0(" ", col, ": ", acres),
+      textposition = "middle right"
+    ) %>% 
     layout(
       xaxis = list(visible = F, showgrid = F, title = ""),
       yaxis = list(visible = F, showgrid = F, title = ""),
-      hovermode = "y",
+      hovermode = NULL,
       margin = list(t = 0, r = 0, l = 0, b = 0),
-      font = list(color = "white"),
+      font = list(color = textcolor),
       paper_bgcolor = "transparent",
       plot_bgcolor = "transparent"
     ) %>%
