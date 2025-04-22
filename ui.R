@@ -41,10 +41,12 @@ vbs <- list(
     showcase_layout = "bottom"
   ),
   "rootstocks" = card(
-    plotlyOutput("rootstocks_pie")
+    card_header("Top rootstocks"),
+    card_body(plotlyOutput("rootstocks_pie"))
   ),
   "scions" = card(
-    plotlyOutput("scions_pie")
+    card_header("Top scions"),
+    card_body(plotlyOutput("scions_pie"))
   )
 )
 

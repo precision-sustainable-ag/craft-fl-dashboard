@@ -51,11 +51,11 @@ get_expunits <- function(contracts) {
   if (length(contracts)) {
     res <- filter(res, contract %in% contracts) 
   }
-  
+
   res %>% 
     collect() %>% 
     mutate(
-      centroid = st_as_sfc(centroid) %>% round(3),
+      centroid = st_as_sfc(centroid),
       geometry = st_as_sfc(geometry)
     ) %>% 
     filter(!st_is_empty(centroid)) %>% 
@@ -105,8 +105,7 @@ make_pie <- function(dat, col_id) {
       labels = ~col, values = ~acres, 
       type = "pie",
       text = ~col,
-      hovertemplate = "%{value:,} acres<extra></extra>",
-      marker = list(colors = scales::brewer_pal(palette = "Set3")(n_groups(d))),
+      hovertemplate = "%{value:,}ac<extra></extra>",
       showlegend = F
     ) %>%
     layout(
@@ -124,7 +123,7 @@ make_pie <- function(dat, col_id) {
 
 make_bar <- function(dat, col, theme) {
   textcolor = if (theme == "dark") "white" else "black"
-  dat %>%
+  d <- dat %>%
     group_by({{col}}) %>%
     summarize(acres = round(sum(area_acres)), .groups = "drop") %>%
     arrange(-acres) %>% 
@@ -138,17 +137,20 @@ make_bar <- function(dat, col, theme) {
     ) %>% 
     group_by(col, rn) %>%
     summarize(acres = round(sum(acres)), .groups = "drop") %>%
-    arrange(rn) %>% 
+    arrange(rn)
+
+  d %>% 
     plot_ly(hoverinfo = "text") %>% 
     add_bars(
-      x = ~acres, y = ~col, color = ~col, colors = "Set3", 
-      type = "bar",
+      x = ~acres, y = ~col, color = ~col, #colors = "Set2", 
+      colors = scales::brewer_pal(palette = "Set3")(nrow(d)+1)[-2] %>% 
+        setNames(d$col),
       orientation = 'h',
       showlegend = F
     ) %>%
     add_text(
       x = 0, y = ~col, 
-      text = ~paste0(" ", col, ": ", acres),
+      text = ~paste0(" <b>", col, "</b>: ", scales::label_comma()(acres), "ac"),
       textposition = "middle right"
     ) %>% 
     layout(
