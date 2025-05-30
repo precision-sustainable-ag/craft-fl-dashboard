@@ -1,6 +1,7 @@
 library(httr)
 library(DBI)
 library(dplyr)
+library(plotly)
 
 source("secrets.R")
 source("loginAPI.R")
@@ -36,16 +37,21 @@ user_base <-
 
 get_expunits <- function(contracts) {
   res <- tbl(craft_con, "expunitids_view") %>% 
-    inner_join(tbl(craft_con, "contracts") %>% select(contract, year)) %>% 
+    inner_join(
+      tbl(craft_con, "contracts") %>% select(contract, year), 
+      by = "contract"
+      ) %>% 
     left_join(
       tbl(craft_con, "rootstocks") %>% 
         rename(rlabel = label) %>% 
-        select(-uid)
+        select(-uid),
+      by = "rootstock"
     ) %>% 
     left_join(
       tbl(craft_con, "scions") %>% 
         rename(slabel = label) %>% 
-        select(-uid)
+        select(-uid),
+      by = "scion"
     )
   
   if (length(contracts)) {
@@ -65,6 +71,13 @@ get_expunits <- function(contracts) {
   
 }
 
+quietly_relevel_others <- function(.f) {
+  if ("Others" %in% levels(.f)) {
+    forcats::fct_relevel(.f, "Others", after = Inf)
+  } else {
+    .f
+  }
+}
 
 make_map <- function(plots) {
   #browser()
@@ -94,17 +107,21 @@ make_pie <- function(dat, col_id) {
       col = replace({{col_id}}, rn > 5, "Others"),
       rn = replace(rn, rn > 5, 6),
       col = forcats::fct_reorder(col, -acres),
-      col = forcats::fct_relevel(col, "Others", after = Inf) %>% 
+      col = quietly_relevel_others(col) %>% 
         forcats::fct_rev(),
     ) %>% 
     group_by(col, rn) %>%
     summarize(acres = round(sum(acres)), .groups = "drop")
-  
+
   d %>% 
     plot_ly(
       labels = ~col, values = ~acres, 
       type = "pie",
       text = ~col,
+      # marker = list(
+      #   colors = scales::brewer_pal(palette = "Set3")(nrow(d)) %>% 
+      #     setNames(d$col)
+      # ),
       hovertemplate = "%{value:,}ac<extra></extra>",
       showlegend = F
     ) %>%
@@ -132,7 +149,7 @@ make_bar <- function(dat, col, theme) {
       col = replace({{col}}, rn > 5, "Others"),
       rn = replace(rn, rn > 5, 6),
       col = forcats::fct_reorder(col, -acres),
-      col = forcats::fct_relevel(col, "Others", after = Inf) %>% 
+      col = quietly_relevel_others(col) %>% 
         forcats::fct_rev()
     ) %>% 
     group_by(col, rn) %>%
@@ -142,7 +159,7 @@ make_bar <- function(dat, col, theme) {
   d %>% 
     plot_ly(hoverinfo = "text") %>% 
     add_bars(
-      x = ~acres, y = ~col, color = ~col, #colors = "Set2", 
+      x = ~acres, y = ~col, color = ~col, 
       colors = scales::brewer_pal(palette = "Set3")(nrow(d)+1)[-2] %>% 
         setNames(d$col),
       orientation = 'h',
@@ -165,8 +182,27 @@ make_bar <- function(dat, col, theme) {
     config(displayModeBar = F)
   
 }
+
+get_images <- function(con, ct) {
+  
+}
 # box_wkt = glue::glue_data(
 #   input$map_bounds,
 #   "BOX({west} {south}, {east} {north})"
 # )
 # SELECT * from expunitids where geometry && box_wkt
+# 
+# political map on main view, imagery when zoomed in
+# Total groves planted -> "Total acres in CRAFT"
+#     dupe with number of trees planted 
+#       (154-172 trees/ac, closer to 170, estimate is fine)
+# when clicking on contract in the map, show all the exp metadata
+#     even if not logged in
+# even if not logged in, let them zoom in and see outlines
+# no login at all, just do it publicly
+# filter by county or ecoregion 
+#   (the river, the ridge, the flatwoods (east, central, west/south)) 
+#   or trialgroup
+#   across the top (in the title bar?)
+# they eventually want cost and harvest info
+# start with my idea for the drone imagery

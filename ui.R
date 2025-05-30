@@ -1,6 +1,7 @@
 library(shiny)
 library(leaflet)
 library(bslib)
+library(plotly)
 
 # ui <- fluidPage(
 #   titlePanel("CRaFT Grower Dashboard"),
@@ -51,9 +52,9 @@ vbs <- list(
 )
 
 ui <- page_sidebar(
-  window_title = "CRaFT Data Dashboard",
+  window_title = "CRAFT Data Dashboard",
   title = div(
-    span("CRaFT Data Dashboard"),
+    span("CRAFT Data Dashboard"),
     span(input_dark_mode(id = "theme"), style = "padding-left: 50px;")
     ),
   theme = bs_theme(bootswatch = "flatly"),
