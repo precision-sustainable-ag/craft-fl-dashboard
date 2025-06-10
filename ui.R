@@ -51,13 +51,28 @@ vbs <- list(
   )
 )
 
+custom_modal_css = "
+.modal-xl {
+  width: 98%;
+  margin: 1vh auto;
+}
+
+.modal-body {
+  max-height: 98vh;
+  overflow-y: auto;
+}
+"
+
 ui <- page_sidebar(
   window_title = "CRAFT Data Dashboard",
   title = div(
     span("CRAFT Data Dashboard"),
     span(input_dark_mode(id = "theme"), style = "padding-left: 50px;")
     ),
-  theme = bs_theme(bootswatch = "flatly"),
+  theme = bs_theme(bootswatch = "flatly"),  
+  tags$head(
+    tags$style( HTML(custom_modal_css) )
+  ),
   sidebar = sidebar(
     shinyauthr::loginUI(
       id = "login",

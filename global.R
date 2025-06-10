@@ -71,6 +71,10 @@ get_expunits <- function(contracts) {
   
 }
 
+drone_ids <- 
+  tbl(craft_con, "drone_rasters") %>% 
+  collect()
+
 quietly_relevel_others <- function(.f) {
   if ("Others" %in% levels(.f)) {
     forcats::fct_relevel(.f, "Others", after = Inf)
@@ -87,11 +91,13 @@ make_map <- function(plots) {
       lat = ~st_coordinates(centroid)[,2],
       lng = ~st_coordinates(centroid)[,1],
       popup = ~contract,
-      group = "centroids"
+      group = "centroids",
+      layerId = ~contract
     ) %>% 
     addPolygons(
-      data = plots %>% select(geometry), 
-      group = "plots"
+      data = plots %>% select(geometry, contract), 
+      group = "plots",
+      layerId = ~contract
     ) %>% 
     hideGroup("plots")
 }
@@ -182,9 +188,58 @@ make_bar <- function(dat, col, theme) {
     config(displayModeBar = F)
   
 }
+quietly_st_union = function(...) {
+  ret = purrr::quietly(st_union)(...)
+  ret$result
+}
 
-get_images <- function(con, ct) {
-  
+make_bbox_obj = function(...) {
+  st_bbox(...) %>% st_as_sfc() %>% st_transform(4326)
+}
+
+make_raster_list <- function(ct, mt) {
+  fn_df = drone_ids %>% 
+    filter(contract == ct) %>% 
+    filter(metric == "ndvi") %>%    # TODO: use `mt` here
+    mutate(aero_date = lubridate::as_date(aero_date)) %>% 
+    arrange(aero_date) %>% 
+    group_by(aero_date)
+
+  dplyr::group_map(
+    fn_df,
+    ~{
+      
+      l = leaflet(options = leafletOptions(attributionControl = F)) %>% 
+        addProviderTiles("Esri.WorldImagery") %>%
+        addProviderTiles("CartoDB.DarkMatterOnlyLabels") 
+      
+      bb = st_point() %>% st_sfc(crs = 4326) 
+      
+      for (filename in .x$fn) {
+        rs = stars::read_stars(file.path("imagery", filename))
+        bb_ = rs %>% make_bbox_obj() 
+        bb = quietly_st_union(bb, bb_) %>% make_bbox_obj()
+# TODO: add outlines to show expunit ids
+# TODO: fix CSS for size of modal
+        l = leafem::addStarsImage(
+          l, x = rs, 
+          colors = viridis::inferno(256), 
+          layerId = filename
+          )
+      }
+      
+      l %>% 
+        addControl(tags$span(.y), position = "bottomleft") %>% 
+        leafem::addHomeButton(
+          ext = st_bbox(bb), group = "🏠",
+          css = list(
+            opacity = 1, 
+            "font-size" = "125%", 
+            "background-color" = "white"
+            )
+        )
+    }
+  )
 }
 # box_wkt = glue::glue_data(
 #   input$map_bounds,

@@ -81,7 +81,7 @@ server <- function(input, output, session) {
         leafletProxy("map") %>%
           setView(input$map_center[["lng"]], input$map_center[["lat"]], 14)
       }
-
+      
       if (input$map_zoom > 12 & credentials()$user_auth) {
         leafletProxy("map") %>% 
           hideGroup("centroids") %>% 
@@ -94,16 +94,49 @@ server <- function(input, output, session) {
     }
   )
   
+  output$drone_imagery = 
+    renderUI({
+      req(input$map_marker_click$id)
+      make_raster_list(input$map_marker_click$id, "ndvi") %>% 
+        leafsync::sync(ncol = 2)
+    })
+  
+  observeEvent(
+    input$map_marker_click, {
+      imgs = drone_ids %>% filter(contract == input$map_marker_click$id)
+      req(nrow(imgs) > 0)
+      showModal(
+        modalDialog(
+          uiOutput("drone_imagery"),
+          title = div(
+            paste0("Contract: ", input$map_marker_click$id),
+            absolutePanel(
+              div(modalButton(icon("xmark")), style = "float: right;"),
+              top = 2, right = 2, width = 50, height = 50
+            )
+          ),
+          easyClose = T,
+          footer = NULL,
+          size = "xl"
+        )
+      )
+    }) 
+  
+  observeEvent(
+    input$map_shape_click, {
+      message(jsonlite::toJSON(input$map_shape_click, pretty = T))
+    }) 
+  
   plots_for_summary <- reactive({
     req(nrow(plots_for_user()))
     req(is.list(input$map_bounds))
-
+    
     ext = rev(unlist(input$map_bounds)) %>% 
       purrr::set_names(c("xmin", "ymin", "xmax", "ymax")) %>% 
       st_bbox() %>% 
       st_as_sfc() %>% 
       st_as_sf(crs = 4326)
-
+    
     plots_for_user() %>% 
       purrr::quietly(st_filter)(ext) %>% 
       .[["result"]] %>% 
@@ -112,7 +145,7 @@ server <- function(input, output, session) {
   }) %>% 
     debounce(1000)
   
-
+  
   output$acres_total <- renderText({
     req(plots_for_summary())
     
@@ -169,14 +202,14 @@ server <- function(input, output, session) {
     
     make_pie(plots_for_summary(), rlabel)
   })
-
+  
   output$scions_pie <- renderPlotly({
     req(plots_for_summary())
     
     make_bar(plots_for_summary(), slabel, input$theme)
   })
   
-
+  
   
   payloads = eventReactive(
     input$contract_picker,
