@@ -209,7 +209,10 @@ make_raster_list <- function(ct, mt) {
     fn_df,
     ~{
       
-      l = leaflet(options = leafletOptions(attributionControl = F)) %>% 
+      l = leaflet(
+        options = leafletOptions(attributionControl = F), 
+        height = "42vh" 
+        ) %>% 
         addProviderTiles("Esri.WorldImagery") %>%
         addProviderTiles("CartoDB.DarkMatterOnlyLabels") 
       
@@ -219,13 +222,18 @@ make_raster_list <- function(ct, mt) {
         rs = stars::read_stars(file.path("imagery", filename))
         bb_ = rs %>% make_bbox_obj() 
         bb = quietly_st_union(bb, bb_) %>% make_bbox_obj()
-# TODO: add outlines to show expunit ids
-# TODO: fix CSS for size of modal
+        outline = drone_outlines %>% filter(fn == filename)
+        eu = filter(.x, fn == filename) %>% pull(expunitid)
+        
         l = leafem::addStarsImage(
           l, x = rs, 
           colors = viridis::inferno(256), 
           layerId = filename
-          )
+          ) %>% 
+          addPolygons(
+            data = outline, layerId = eu, popup = eu, label = eu,
+            fill = T, fillColor = "#00000000", color = "white"
+            )
       }
       
       l %>% 
