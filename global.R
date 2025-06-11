@@ -19,14 +19,14 @@ craft_con <- dbConnect(
 )
 
 
-forms_con <- dbConnect(
-  RPostgres::Postgres(),
-  user = dstadmin_creds$user,
-  password = dstadmin_creds$password,
-  host = dstadmin_creds$host,
-  dbname = "craft_forms",
-  sslmode = "require"
-)
+# forms_con <- dbConnect(
+#   RPostgres::Postgres(),
+#   user = dstadmin_creds$user,
+#   password = dstadmin_creds$password,
+#   host = dstadmin_creds$host,
+#   dbname = "craft_forms",
+#   sslmode = "require"
+# )
 
 user_base <- 
   tbl(craft_con, "access_view") %>% 
@@ -52,6 +52,12 @@ get_expunits <- function(contracts) {
         rename(slabel = label) %>% 
         select(-uid),
       by = "scion"
+    ) %>% 
+    left_join(
+      tbl(craft_con, "drone_rasters") %>% 
+        distinct(contract) %>% 
+        mutate(imagery = T),
+      by = "contract"
     )
   
   if (length(contracts)) {
@@ -92,7 +98,8 @@ make_map <- function(plots) {
       lng = ~st_coordinates(centroid)[,1],
       popup = ~contract,
       group = "centroids",
-      layerId = ~contract
+      layerId = ~contract,
+      color = ~ifelse(!is.na(imagery), '#f1a340', '#998ec3') #PuOr
     ) %>% 
     addPolygons(
       data = plots %>% select(geometry, contract), 
@@ -205,13 +212,15 @@ make_raster_list <- function(ct, mt) {
     arrange(aero_date) %>% 
     group_by(aero_date)
 
+  ht = ifelse(n_groups(fn_df) <= 2, "84vh", "42vh")
+  
   dplyr::group_map(
     fn_df,
     ~{
       
       l = leaflet(
         options = leafletOptions(attributionControl = F), 
-        height = "42vh" 
+        height = ht 
         ) %>% 
         addProviderTiles("Esri.WorldImagery") %>%
         addProviderTiles("CartoDB.DarkMatterOnlyLabels") 
@@ -268,4 +277,3 @@ make_raster_list <- function(ct, mt) {
 #   or trialgroup
 #   across the top (in the title bar?)
 # they eventually want cost and harvest info
-# start with my idea for the drone imagery
