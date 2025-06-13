@@ -74,17 +74,10 @@ ui <- page_sidebar(
     
     shinyauthr::logoutUI(id = "logout"),
     uiOutput("user_info"),
-    # 
-    # selectInput(
-    #   "eco", "Filter by ecoregion", 
-    #   c("", unique(ecoregions$US_L4NAME)),
-    #   selectize = F,
-    #   selected = ""
-    # ),
     
     shinyWidgets::checkboxGroupButtons(
       "eco", "Filter by ecoregion", 
-      choices = unique(ecoregions$US_L4NAME),
+      choices = sort(unique(ecoregions$US_L4NAME)),
       status = "outline-info",
       direction = "vertical"
     ),
