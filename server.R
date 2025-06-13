@@ -68,11 +68,25 @@ server <- function(input, output, session) {
       }
     )
   
+  plots_with_filters = 
+    reactive({
+        message(input$eco)
+        if(length(input$eco)) {
+          plots_for_user() %>% 
+            purrr::quietly(st_filter)(
+              ecoregions %>% filter(US_L4NAME %in% input$eco)
+            ) %>% 
+            .[["result"]]
+        } else {
+          plots_for_user()
+        }
+      }
+    )
   
   
   output$map =
     renderLeaflet({
-      make_map(plots_for_user())
+      make_map(plots_with_filters())
     })
   
   observeEvent(
@@ -128,7 +142,7 @@ server <- function(input, output, session) {
     }) 
   
   plots_for_summary <- reactive({
-    req(nrow(plots_for_user()))
+    req(nrow(plots_with_filters()))
     req(is.list(input$map_bounds))
     
     ext = rev(unlist(input$map_bounds)) %>% 
@@ -137,7 +151,7 @@ server <- function(input, output, session) {
       st_as_sfc() %>% 
       st_as_sf(crs = 4326)
     
-    plots_for_user() %>% 
+    plots_with_filters() %>% 
       purrr::quietly(st_filter)(ext) %>% 
       .[["result"]] %>% 
       st_drop_geometry() %>% 
@@ -149,12 +163,26 @@ server <- function(input, output, session) {
   output$acres_total <- renderText({
     req(plots_for_summary())
     
-    plots_for_summary() %>%
+    val = plots_for_summary() %>%
       pull(area_acres) %>% 
       sum() %>% 
+      round() 
+    
+    v_acres = scales::label_comma()(val)
+    v_trees = scales::label_comma()(val*170)
+    
+    paste(v_acres, "acres", "\n", v_trees, "trees")
+  })
+  
+  output$trees_total <- reactive({
+    req(plots_for_summary())
+    
+    plots_for_summary() %>%
+      pull(area_acres) %>% 
+      sum() %>% .*170 %>% 
       round() %>% 
       scales::label_comma()(.) %>% 
-      paste("acres")
+      paste("trees")
   })
   
   output$acres_years_avg <- renderText({

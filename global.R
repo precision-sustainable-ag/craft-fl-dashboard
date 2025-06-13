@@ -35,6 +35,15 @@ user_base <-
   collect() %>% 
   mutate(password_dummy = "")
 
+drone_ids <- 
+  tbl(craft_con, "drone_rasters") %>% 
+  collect()
+
+# TODO: check these match
+# drone_outlines <- st_read("imagery/drone_outlines.geojson")
+ecoregions = st_read("fl_eco.geojson")
+
+
 get_expunits <- function(contracts) {
   res <- tbl(craft_con, "expunitids_view") %>% 
     inner_join(
@@ -64,22 +73,21 @@ get_expunits <- function(contracts) {
     res <- filter(res, contract %in% contracts) 
   }
 
-  res %>% 
+  res = res %>% 
     collect() %>% 
     mutate(
       centroid = st_as_sfc(centroid),
       geometry = st_as_sfc(geometry)
     ) %>% 
-    filter(!st_is_empty(centroid)) %>% 
+    filter(!st_is_empty(centroid))%>% 
     # mutate(centroid = centroid + runif(nrow(.), min = 0.008, max = 0.008)) %>% 
     st_as_sf(crs = 4326) %>% 
     st_zm()
   
+  res  
 }
 
-drone_ids <- 
-  tbl(craft_con, "drone_rasters") %>% 
-  collect()
+
 
 quietly_relevel_others <- function(.f) {
   if ("Others" %in% levels(.f)) {
@@ -99,7 +107,8 @@ make_map <- function(plots) {
       popup = ~contract,
       group = "centroids",
       layerId = ~contract,
-      color = ~ifelse(!is.na(imagery), '#f1a340', '#998ec3') #PuOr
+      color = ~ifelse(!is.na(imagery), '#f1a340', '#998ec3'), #PuOr
+      opacity = 0.7, fillOpacity = 0.3
     ) %>% 
     addPolygons(
       data = plots %>% select(geometry, contract), 
@@ -265,9 +274,6 @@ make_raster_list <- function(ct, mt) {
 # SELECT * from expunitids where geometry && box_wkt
 # 
 # political map on main view, imagery when zoomed in
-# Total groves planted -> "Total acres in CRAFT"
-#     dupe with number of trees planted 
-#       (154-172 trees/ac, closer to 170, estimate is fine)
 # when clicking on contract in the map, show all the exp metadata
 #     even if not logged in
 # even if not logged in, let them zoom in and see outlines
