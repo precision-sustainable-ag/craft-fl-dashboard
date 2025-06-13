@@ -111,9 +111,11 @@ make_map <- function(plots) {
       opacity = 0.7, fillOpacity = 0.3
     ) %>% 
     addPolygons(
-      data = plots %>% select(geometry, contract), 
+      data = plots %>% select(geometry, contract, imagery), 
       group = "plots",
-      layerId = ~contract
+      layerId = ~contract,
+      color = ~ifelse(!is.na(imagery), '#f1a340', '#998ec3'), #PuOr
+      opacity = 0.7, fillOpacity = 0.3
     ) %>% 
     hideGroup("plots")
 }
