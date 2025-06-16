@@ -70,7 +70,6 @@ server <- function(input, output, session) {
   
   plots_with_filters = 
     reactive({
-        message(input$eco)
         if(length(input$eco)) {
           plots_for_user() %>% 
             purrr::quietly(st_filter)(
@@ -107,6 +106,13 @@ server <- function(input, output, session) {
       }
     }
   )
+  # TODO combine click events
+  # contract_clicked = reactive({
+  #   if (is.null(input$map_marker_click$id)) return( input$map_shape_click$id )
+  #   if (is.null(input$map_shape_click$id)) return( input$map_marker_click$id )
+  #   NULL
+  # }) %>% 
+  #   bindEvent(input$map_marker_click, input$map_shape_click)
   
   output$drone_imagery = 
     renderUI({
@@ -228,13 +234,13 @@ server <- function(input, output, session) {
   output$rootstocks_pie <- renderPlotly({
     req(plots_for_summary())
     
-    make_pie(plots_for_summary(), rlabel)
+    purrr::quietly(make_pie)(plots_for_summary(), rlabel)$result
   })
   
   output$scions_pie <- renderPlotly({
     req(plots_for_summary())
     
-    make_bar(plots_for_summary(), slabel, input$theme)
+    purrr::quietly(make_bar)(plots_for_summary(), slabel, input$theme)$result
   })
   
   

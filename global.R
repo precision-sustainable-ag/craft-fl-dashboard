@@ -285,3 +285,8 @@ make_raster_list <- function(ct, mt) {
 #   or trialgroup
 #   across the top (in the title bar?)
 # they eventually want cost and harvest info
+# look up a scion/rs combo, get stats on them, results etc
+# look up a treatment combo, get stats, etc
+# swap scion and rootstock positions
+# compute trees per acre for sites with drone imagery
+# "Can we add an explanation of the difference between the NDVI and NDRE also a color legend"

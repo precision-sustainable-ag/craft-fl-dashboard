@@ -97,7 +97,7 @@ ui <- page_sidebar(
     layout_column_wrap(
       width = 1,
       heights_equal = "row",
-      vbs[["rootstocks"]], vbs[["scions"]]
+      vbs[["scions"]], vbs[["rootstocks"]]
     )
   )
   # layout_column_wrap(
