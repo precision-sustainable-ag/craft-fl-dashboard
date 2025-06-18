@@ -68,18 +68,40 @@ server <- function(input, output, session) {
       }
     )
   
+  observeEvent(
+    plots_for_user(), {
+      req(nrow(plots_for_user()) > 0)
+      updateSlimSelect(
+        inputId = "rs", 
+        choices = sort(unique(plots_for_user() %>% pull(rlabel)))
+        )
+      updateSlimSelect(
+        inputId = "sc", 
+        choices = sort(unique(plots_for_user() %>% pull(slabel)))
+        )
+    })
+  
   plots_with_filters = 
     reactive({
-        if(length(input$eco)) {
-          plots_for_user() %>% 
-            purrr::quietly(st_filter)(
-              ecoregions %>% filter(US_L4NAME %in% input$eco)
-            ) %>% 
-            .[["result"]]
-        } else {
-          plots_for_user()
-        }
+      ret = plots_for_user()
+      
+      if(length(input$eco)) {
+        ret = ret %>% 
+          purrr::quietly(st_filter)(
+            ecoregions %>% filter(US_L4NAME %in% input$eco)
+          ) %>% 
+          .[["result"]]
       }
+      
+      if (length(input$rs)) {
+        ret = ret %>% filter(rlabel %in% input$rs)
+      }
+      
+      if (length(input$sc)) {
+        ret = ret %>% filter(slabel %in% input$sc)
+      }
+      ret
+    }
     )
   
   
@@ -166,7 +188,7 @@ server <- function(input, output, session) {
     debounce(1000)
   
   
-  output$acres_total <- renderText({
+  output$acres_total <- renderUI({
     req(plots_for_summary())
     
     val = plots_for_summary() %>%
@@ -177,7 +199,7 @@ server <- function(input, output, session) {
     v_acres = scales::label_comma()(val)
     v_trees = scales::label_comma()(val*170)
     
-    paste(v_acres, "acres", "\n", v_trees, "trees")
+    glue::glue("{v_acres} acres<br>{v_trees} trees") %>% HTML()
   })
   
   output$trees_total <- reactive({

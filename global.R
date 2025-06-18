@@ -2,6 +2,7 @@ library(httr)
 library(DBI)
 library(dplyr)
 library(plotly)
+library(sf)
 
 source("secrets.R")
 source("loginAPI.R")
@@ -99,6 +100,13 @@ quietly_relevel_others <- function(.f) {
 
 make_map <- function(plots) {
   #browser()
+  if (!nrow(plots)) {
+    return( 
+      leaflet(ecoregions) %>% 
+        addProviderTiles("OpenStreetMap.Mapnik") %>% 
+        addPolygons(opacity = 0, fillOpacity = 0)
+        )
+  }
   leaflet(plots) %>% 
     addProviderTiles("OpenStreetMap.Mapnik") %>% 
     addCircleMarkers(

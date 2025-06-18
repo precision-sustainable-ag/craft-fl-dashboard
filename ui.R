@@ -2,6 +2,8 @@ library(shiny)
 library(leaflet)
 library(bslib)
 library(plotly)
+library(shinyWidgets)
+library(sf)
 
 # ui <- fluidPage(
 #   titlePanel("CRaFT Grower Dashboard"),
@@ -30,7 +32,7 @@ library(plotly)
 vbs <- list(
   "acres_total" = value_box(
     "Total groves planted",
-    value = textOutput("acres_total"),
+    value = uiOutput("acres_total"),
     theme = "primary",
     showcase = icon("seedling")
   ),
@@ -62,7 +64,13 @@ ui <- page_sidebar(
     bslib::bs_add_rules(
       c(".modal-xl { width: 98%; margin: 1vh auto; }",
         ".modal-body { max-height: 90vh; overflow-y: auto; }",
-        ".modal-dialog { max-width: 98%; }")
+        ".modal-dialog { max-width: 98%; }",
+        ":root { 
+          .ss-content .ss-search input {
+            color: var(--ss-font-color);
+          } 
+        }"
+       )
     ),  
   sidebar = sidebar(
     shinyauthr::loginUI(
@@ -75,11 +83,47 @@ ui <- page_sidebar(
     shinyauthr::logoutUI(id = "logout"),
     uiOutput("user_info"),
     
-    shinyWidgets::checkboxGroupButtons(
+    checkboxGroupButtons(
       "eco", "Filter by ecoregion", 
       choices = sort(unique(ecoregions$US_L4NAME)),
       status = "outline-info",
-      direction = "vertical"
+      direction = "vertical",
+      width = "100%"
+    ),
+    
+    # pickerInput(
+    #   "sc", "Filter by scion",
+    #   choices = c(),
+    #   options = pickerOptions(container = "body", liveSearch = TRUE),
+    #   multiple = T,
+    #   width = "100%"
+    # ),
+    # 
+    # virtualSelectInput(
+    #   "rs", "Filter by rootstock",
+    #   choices = c(),
+    #   showValueAsTags = T,
+    #   search = T,
+    #   multiple = T,
+    #   width = "100%"
+    # ),
+    
+    slimSelectInput(
+      "sc", "Filter by scion",
+      choices = c(),
+      multiple = T,
+      width = "100%",
+      closeOnSelect = T,
+      placeholder = ""
+    ),
+    
+    slimSelectInput(
+      "rs", "Filter by rootstock",
+      choices = c(),
+      multiple = T,
+      width = "100%",
+      closeOnSelect = T,
+      placeholder = ""
     ),
     
     uiOutput("contract_list"),
