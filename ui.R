@@ -5,29 +5,11 @@ library(plotly)
 library(shinyWidgets)
 library(sf)
 
-# ui <- fluidPage(
-#   titlePanel("CRaFT Grower Dashboard"),
-#   # add logout button UI
-#   div(class = "pull-right", shinyauthr::logoutUI(id = "logout")),
-#   # add login panel UI function
-#   shinyauthr::loginUI(
-#     id = "login",
-#     title = "Log in with your Kobo credentials",
-#     user_title = "Username"
-#     ),
-#   sidebarLayout(
-#     sidebarPanel = sidebarPanel(
-#       uiOutput("contract_list")
-#     ),
-#     mainPanel = mainPanel(
-#       leafletOutput("map"),
-#       fluidRow(
-#         column(6, uiOutput("submissions")),
-#         column(6, tableOutput("table"))
-#       )
-#     )
-#   )
-# )
+fillable_navset_hidden <- function(..., id) {
+  panel <- shiny::tabsetPanel(id = id, type = "hidden", ...)
+  panel$children[[2]] <- bslib:::makeTabsFillable(panel$children[[2]])
+  bslib::as_fill_carrier(panel)
+}
 
 vbs <- list(
   "acres_total" = value_box(
@@ -59,7 +41,7 @@ ui <- page_sidebar(
   title = div(
     span("CRAFT Data Dashboard"),
     span(input_dark_mode(id = "theme"), style = "padding-left: 50px;")
-    ),
+  ),
   theme = bs_theme(bootswatch = "flatly") %>% 
     bslib::bs_add_rules(
       c(".modal-xl { width: 98%; margin: 1vh auto; }",
@@ -70,7 +52,7 @@ ui <- page_sidebar(
             color: var(--ss-font-color);
           } 
         }"
-       )
+      )
     ),  
   sidebar = sidebar(
     shinyauthr::loginUI(
@@ -90,23 +72,6 @@ ui <- page_sidebar(
       direction = "vertical",
       width = "100%"
     ),
-    
-    # pickerInput(
-    #   "sc", "Filter by scion",
-    #   choices = c(),
-    #   options = pickerOptions(container = "body", liveSearch = TRUE),
-    #   multiple = T,
-    #   width = "100%"
-    # ),
-    # 
-    # virtualSelectInput(
-    #   "rs", "Filter by rootstock",
-    #   choices = c(),
-    #   showValueAsTags = T,
-    #   search = T,
-    #   multiple = T,
-    #   width = "100%"
-    # ),
     
     slimSelectInput(
       "sc", "Filter by scion",
@@ -141,14 +106,11 @@ ui <- page_sidebar(
     layout_column_wrap(
       width = 1,
       heights_equal = "row",
-      vbs[["scions"]], vbs[["rootstocks"]]
+      fillable_navset_hidden(
+        id = "navset_scions",
+        nav_panel_hidden(vbs[["scions"]], value = "main")
+      ), 
+      vbs[["rootstocks"]]
     )
   )
-  # layout_column_wrap(
-  #   !!!vbs
-  # ),
-  # leafletOutput("map")
-  # fluidRow(
-  #   column(6, uiOutput("submissions")),
-  # )
 )

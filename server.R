@@ -199,7 +199,8 @@ server <- function(input, output, session) {
     v_acres = scales::label_comma()(val)
     v_trees = scales::label_comma()(val*170)
     
-    glue::glue("{v_acres} acres<br>{v_trees} trees") %>% HTML()
+    #glue::glue("{v_acres} acres<br>{v_trees} trees") %>% HTML()
+    div(v_acres, "acres", tags$br(), v_trees, "trees")
   })
   
   output$trees_total <- reactive({
