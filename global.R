@@ -128,7 +128,6 @@ make_map <- function(plots) {
 }
 
 make_pie <- function(dat, col_id) {
-  #browser()
   d = dat %>%
     group_by({{col_id}}) %>%
     summarize(acres = round(sum(area_acres)), .groups = "drop") %>%
@@ -156,7 +155,7 @@ make_pie <- function(dat, col_id) {
       hovertemplate = "%{value:,}ac<extra></extra>",
       showlegend = F
     ) %>%
-    layout(
+    plotly::layout(
       xaxis = list(visible = F, showgrid = F, title = ""),
       yaxis = list(visible = F, showgrid = F, title = ""),
       hovermode = "x",
@@ -165,7 +164,7 @@ make_pie <- function(dat, col_id) {
       paper_bgcolor = "transparent",
       plot_bgcolor = "transparent"
     ) %>%
-    config(displayModeBar = F)
+    plotly::config(displayModeBar = F)
   
 }
 
@@ -201,7 +200,7 @@ make_bar <- function(dat, col, theme) {
       text = ~paste0(" <b>", col, "</b>: ", scales::label_comma()(acres), "ac"),
       textposition = "middle right"
     ) %>% 
-    layout(
+    plotly::layout(
       xaxis = list(visible = F, showgrid = F, title = ""),
       yaxis = list(visible = F, showgrid = F, title = ""),
       hovermode = NULL,
@@ -210,7 +209,7 @@ make_bar <- function(dat, col, theme) {
       paper_bgcolor = "transparent",
       plot_bgcolor = "transparent"
     ) %>%
-    config(displayModeBar = F)
+    plotly::config(displayModeBar = F)
   
 }
 

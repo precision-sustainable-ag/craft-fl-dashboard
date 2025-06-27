@@ -270,7 +270,7 @@ server <- function(input, output, session) {
         hovertemplate = "%{x}: <b>%{y:,}</b>ac<extra></extra>",
         name = ""
       ) %>%
-      layout(
+      plotly::layout(
         xaxis = list(visible = F, showgrid = F, title = ""),
         yaxis = list(visible = F, showgrid = F, title = ""),
         hovermode = "x",
@@ -279,7 +279,7 @@ server <- function(input, output, session) {
         paper_bgcolor = "transparent",
         plot_bgcolor = "transparent"
       ) %>%
-      config(displayModeBar = F)
+      plotly::config(displayModeBar = F)
   })
   
   output$rootstocks_pie <- renderPlotly({
