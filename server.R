@@ -177,10 +177,13 @@ server <- function(input, output, session) {
       modalDialog(
         uiOutput("drone_imagery"),
         title = div(
-          paste0("Contract: ", input$map_marker_click$id),
-          "NDVI", colorpills(viridis::inferno(5), (0:4)/4),
+            tags$span("Contract: ", input$map_marker_click$id),
+            tags$span(
+              "NDVI: ", colorpills(viridis::inferno(5), (0:4)/4),
+              style = "padding-left: 50px;"
+            ),
           absolutePanel(
-            div(modalButton(icon("xmark")), style = "float: right;"),
+            div(modalButton(bsicons::bs_icon("x-circle-fill")), style = "float: right;"),
             top = 2, right = 2, width = 50, height = 50
           )
         ),
