@@ -5,6 +5,16 @@ library(leaflet)
 library(dplyr)
 library(plotly)
 
+exitButton <- function(id) {
+  absolutePanel(
+    actionButton(
+      inputId = id,
+      label = bsicons::bs_icon("x-circle-fill"),
+      class = "btn-link btn-sm"
+    ),
+    top = 0, right = 0
+  )
+}
 
 server <- function(input, output, session) {
   sf_use_s2(FALSE)
@@ -74,11 +84,11 @@ server <- function(input, output, session) {
       updateSlimSelect(
         inputId = "rs", 
         choices = sort(unique(plots_for_user() %>% pull(rlabel)))
-        )
+      )
       updateSlimSelect(
         inputId = "sc", 
         choices = sort(unique(plots_for_user() %>% pull(slabel)))
-        )
+      )
     })
   
   plots_with_filters = 
@@ -224,7 +234,7 @@ server <- function(input, output, session) {
       mean() %>% 
       round() %>% 
       scales::label_comma()(.) %>% 
-      paste(., " acres planted per year on average")
+      paste(., "acres planted per year on average")
   })
   
   output$acres_years <- renderPlotly({
@@ -266,6 +276,59 @@ server <- function(input, output, session) {
     purrr::quietly(make_bar)(plots_for_summary(), slabel, input$theme)$result
   })
   
+  output$scions_contract = renderTable({
+    st_drop_geometry(plots_for_summary()) %>% 
+      filter(contract == input$map_marker_click$id) %>% 
+      select("Plot" = expunitid, "Scion" = slabel, "Rootstock" = rlabel)
+  })
+  
+  output$acres_contract = renderTable({
+    plots_for_summary() %>% 
+      filter(contract == input$map_marker_click$id) %>% 
+      select("Plot" = expunitid, "Acres" = area_acres)
+  })
+  
+  observe({
+    id = input$map_marker_click
+    nav_insert(
+      "navset_scions",
+      nav = nav_panel_hidden(
+        value = id$id,
+        card(tableOutput("scions_contract"), exitButton("x"))
+      ),
+      select = T
+    )
+    nav_insert(
+      "navset_acres",
+      nav = nav_panel_hidden(
+        value = id$id,
+        card(tableOutput("acres_contract"), exitButton("x"))
+      ),
+      select = T
+    )
+  }) %>% 
+    bindEvent(input$map_marker_click)
+  
+  
+  observe({
+    nav_select("navset_scions", "main")
+    nav_remove("navset_scions", input$map_marker_click$id)
+
+    nav_select("navset_acres", "main")
+    nav_remove("navset_acres", input$map_marker_click$id)
+  }) %>%
+    bindEvent(input$x)
+
+  observe({
+    if (input$map_click$lat != input$map_marker_click$lat) {
+      nav_select("navset_scions", "main")
+      nav_remove("navset_scions", input$map_marker_click$id)
+
+      nav_select("navset_acres", "main")
+      nav_remove("navset_acres", input$map_marker_click$id)
+    }
+  }) %>%
+    bindEvent(input$map_click)
   
   
   payloads = eventReactive(

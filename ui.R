@@ -98,7 +98,13 @@ ui <- page_sidebar(
   layout_columns(
     col_widths = c(8, 4),
     layout_column_wrap(
-      layout_column_wrap(vbs[["acres_total"]], vbs[["acres_years"]]),
+      layout_column_wrap(
+        fillable_navset_hidden(
+          id = "navset_acres",
+          nav_panel_hidden(vbs[["acres_total"]], value = "main")
+        ), 
+        vbs[["acres_years"]]
+      ),
       leafletOutput("map"),
       heights_equal = "row",
       width = 1
