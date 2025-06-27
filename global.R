@@ -8,7 +8,7 @@ source("secrets.R")
 source("loginAPI.R")
 
 
-
+bootswatch = "flatly"
 
 craft_con <- dbConnect(
   RPostgres::Postgres(),
@@ -105,14 +105,13 @@ make_map <- function(plots) {
       leaflet(ecoregions) %>% 
         addProviderTiles("OpenStreetMap.Mapnik") %>% 
         addPolygons(opacity = 0, fillOpacity = 0)
-        )
+    )
   }
   leaflet(plots) %>% 
     addProviderTiles("OpenStreetMap.Mapnik") %>% 
     addCircleMarkers(
       lat = ~st_coordinates(centroid)[,2],
       lng = ~st_coordinates(centroid)[,1],
-      popup = ~contract,
       group = "centroids",
       layerId = ~contract,
       color = ~ifelse(!is.na(imagery), '#f1a340', '#998ec3'), #PuOr
@@ -144,7 +143,7 @@ make_pie <- function(dat, col_id) {
     ) %>% 
     group_by(col, rn) %>%
     summarize(acres = round(sum(acres)), .groups = "drop")
-
+  
   d %>% 
     plot_ly(
       labels = ~col, values = ~acres, 
@@ -187,7 +186,7 @@ make_bar <- function(dat, col, theme) {
     group_by(col, rn) %>%
     summarize(acres = round(sum(acres)), .groups = "drop") %>%
     arrange(rn)
-
+  
   d %>% 
     plot_ly(hoverinfo = "text") %>% 
     add_bars(
@@ -214,6 +213,7 @@ make_bar <- function(dat, col, theme) {
     config(displayModeBar = F)
   
 }
+
 quietly_st_union = function(...) {
   ret = purrr::quietly(st_union)(...)
   ret$result
@@ -230,7 +230,7 @@ make_raster_list <- function(ct, mt) {
     mutate(aero_date = lubridate::as_date(aero_date)) %>% 
     arrange(aero_date) %>% 
     group_by(aero_date)
-
+  
   ht = ifelse(n_groups(fn_df) <= 2, "84vh", "42vh")
   
   dplyr::group_map(
@@ -240,7 +240,7 @@ make_raster_list <- function(ct, mt) {
       l = leaflet(
         options = leafletOptions(attributionControl = F), 
         height = ht 
-        ) %>% 
+      ) %>% 
         addProviderTiles("Esri.WorldImagery") %>%
         addProviderTiles("CartoDB.DarkMatterOnlyLabels") 
       
@@ -254,14 +254,14 @@ make_raster_list <- function(ct, mt) {
         eu = filter(.x, fn == filename) %>% pull(expunitid)
         
         l = leafem::addStarsImage(
-          l, x = rs, 
-          colors = viridis::inferno(256), 
+          l, x = rs,    # TODO magic domain values should be dynamic for other metrics
+          colors = colorNumeric("inferno", domain = c(0,1)), 
           layerId = filename
-          ) %>% 
+        ) %>% 
           addPolygons(
             data = outline, layerId = eu, popup = eu, label = eu,
             fill = T, fillColor = "#00000000", color = "white"
-            )
+          )
       }
       
       l %>% 
@@ -272,7 +272,7 @@ make_raster_list <- function(ct, mt) {
             opacity = 1, 
             "font-size" = "125%", 
             "background-color" = "white"
-            )
+          )
         )
     }
   )
@@ -295,6 +295,5 @@ make_raster_list <- function(ct, mt) {
 # they eventually want cost and harvest info
 # look up a scion/rs combo, get stats on them, results etc
 # look up a treatment combo, get stats, etc
-# swap scion and rootstock positions
 # compute trees per acre for sites with drone imagery
 # "Can we add an explanation of the difference between the NDVI and NDRE also a color legend"

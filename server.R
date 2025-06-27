@@ -16,6 +16,23 @@ exitButton <- function(id) {
   )
 }
 
+colorpills = function(cols, vals) {
+  
+  purrr::map2(
+    cols, vals %>% {sprintf("%0.2f",. )},
+    ~{
+      hcl <- farver::decode_colour(.x, "rgb", "hcl")
+      label_col <- ifelse(hcl[, "l"] > 50, "black", "white")
+      tags$button( 
+        .y, 
+        type = "button", 
+        class = glue::glue("btn"),
+        style = glue::glue("background-color: {.x}; color: {label_col}")
+      ) 
+    }) %>% 
+    span(class="btn-group", role="group")
+}
+
 server <- function(input, output, session) {
   sf_use_s2(FALSE)
   # call login module supplying data frame, 
@@ -153,26 +170,27 @@ server <- function(input, output, session) {
         leafsync::sync(ncol = 2)
     })
   
-  observeEvent(
-    input$map_marker_click, {
-      imgs = drone_ids %>% filter(contract == input$map_marker_click$id)
-      req(nrow(imgs) > 0)
-      showModal(
-        modalDialog(
-          uiOutput("drone_imagery"),
-          title = div(
-            paste0("Contract: ", input$map_marker_click$id),
-            absolutePanel(
-              div(modalButton(icon("xmark")), style = "float: right;"),
-              top = 2, right = 2, width = 50, height = 50
-            )
-          ),
-          easyClose = T,
-          footer = NULL,
-          size = "xl"
-        )
+  observe({
+    imgs = drone_ids %>% filter(contract == input$map_marker_click$id)
+    req(nrow(imgs) > 0)
+    showModal(
+      modalDialog(
+        uiOutput("drone_imagery"),
+        title = div(
+          paste0("Contract: ", input$map_marker_click$id),
+          "NDVI", colorpills(viridis::inferno(5), (0:4)/4),
+          absolutePanel(
+            div(modalButton(icon("xmark")), style = "float: right;"),
+            top = 2, right = 2, width = 50, height = 50
+          )
+        ),
+        easyClose = T,
+        footer = NULL,
+        size = "xl"
       )
-    }) 
+    )
+  }) %>% 
+    bindEvent(input$show_imagery)
   
   observeEvent(
     input$map_shape_click, {
@@ -276,16 +294,32 @@ server <- function(input, output, session) {
     purrr::quietly(make_bar)(plots_for_summary(), slabel, input$theme)$result
   })
   
-  output$scions_contract = renderTable({
-    st_drop_geometry(plots_for_summary()) %>% 
+  output$scions_contract = renderUI({
+    has_img = st_drop_geometry(plots_for_summary()) %>% 
       filter(contract == input$map_marker_click$id) %>% 
-      select("Plot" = expunitid, "Scion" = slabel, "Rootstock" = rlabel)
+      pull(imagery) %>% 
+      any(na.rm = T)
+    
+    btn = actionButton(
+      "show_imagery", "Show drone imagery", 
+      icon = icon("map"), class = "btn-success"
+    )
+    
+    div(
+      "Some placeholder text about dates of enrollment",
+      tags$hr(),
+      if (has_img) { btn }
+    ) %>% 
+      as_fillable_container()
   })
   
   output$acres_contract = renderTable({
     plots_for_summary() %>% 
       filter(contract == input$map_marker_click$id) %>% 
-      select("Plot" = expunitid, "Acres" = area_acres)
+      mutate(cofactor = replace(cofactor, is.na(cofactor) | cofactor == "NA", "")) %>% 
+      select("Plot" = expunitid, "Acres" = area_acres, 
+             "Scion" = slabel, "Rootstock" = rlabel,
+             "Trial Group" = trial_group, "Cofactor" = cofactor)
   })
   
   observe({
@@ -294,7 +328,7 @@ server <- function(input, output, session) {
       "navset_scions",
       nav = nav_panel_hidden(
         value = id$id,
-        card(tableOutput("scions_contract"), exitButton("x"))
+        card(uiOutput("scions_contract"), exitButton("x"))
       ),
       select = T
     )
@@ -313,17 +347,17 @@ server <- function(input, output, session) {
   observe({
     nav_select("navset_scions", "main")
     nav_remove("navset_scions", input$map_marker_click$id)
-
+    
     nav_select("navset_acres", "main")
     nav_remove("navset_acres", input$map_marker_click$id)
   }) %>%
     bindEvent(input$x)
-
+  
   observe({
     if (input$map_click$lat != input$map_marker_click$lat) {
       nav_select("navset_scions", "main")
       nav_remove("navset_scions", input$map_marker_click$id)
-
+      
       nav_select("navset_acres", "main")
       nav_remove("navset_acres", input$map_marker_click$id)
     }

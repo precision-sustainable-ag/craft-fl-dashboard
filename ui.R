@@ -42,7 +42,7 @@ ui <- page_sidebar(
     span("CRAFT Data Dashboard"),
     span(input_dark_mode(id = "theme"), style = "padding-left: 50px;")
   ),
-  theme = bs_theme(bootswatch = "flatly") %>% 
+  theme = bs_theme(bootswatch = bootswatch) %>% 
     bslib::bs_add_rules(
       c(".modal-xl { width: 98%; margin: 1vh auto; }",
         ".modal-body { max-height: 90vh; overflow-y: auto; }",
@@ -98,15 +98,18 @@ ui <- page_sidebar(
   layout_columns(
     col_widths = c(8, 4),
     layout_column_wrap(
-      layout_column_wrap(
-        fillable_navset_hidden(
-          id = "navset_acres",
-          nav_panel_hidden(vbs[["acres_total"]], value = "main")
-        ), 
-        vbs[["acres_years"]]
-      ),
+      fillable_navset_hidden(
+        id = "navset_acres",
+        nav_panel_hidden(
+          layout_column_wrap(
+            vbs[["acres_total"]], 
+            vbs[["acres_years"]]
+            ), 
+          value = "main"
+          )
+        ),
       leafletOutput("map"),
-      heights_equal = "row",
+      heights_equal = "all",
       width = 1
     ),
     layout_column_wrap(
