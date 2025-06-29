@@ -16,6 +16,7 @@ exitButton <- function(id) {
   )
 }
 
+
 colorpills = function(cols, vals) {
   
   purrr::map2(
@@ -146,12 +147,28 @@ server <- function(input, output, session) {
       
       if (input$map_zoom > 12 & credentials()$user_auth) {
         leafletProxy("map") %>% 
-          hideGroup("centroids") %>% 
+          hideGroup("centroids_political") %>% 
+          hideGroup("centroids_aerial") %>% 
           showGroup("plots")
       } else {
         leafletProxy("map") %>%
           hideGroup("plots") %>%
-          showGroup("centroids")
+          showGroup("centroids_aerial") %>% 
+          showGroup("centroids_political")
+      }
+      
+      if (input$map_zoom > 10) {
+        leafletProxy("map") %>% 
+          hideGroup("centroids_political") %>% 
+          hideGroup("political") %>% 
+          showGroup("centroids_aerial") %>% 
+          showGroup("aerial")
+      } else {
+        leafletProxy("map") %>% 
+          hideGroup("centroids_aerial") %>%
+          hideGroup("aerial") %>% 
+          showGroup("centroids_political") %>% 
+          showGroup("political")
       }
     }
   )
@@ -201,7 +218,7 @@ server <- function(input, output, session) {
     }) 
   
   plots_for_summary <- reactive({
-    req(nrow(plots_with_filters()))
+    req(nrow(plots_with_filters()) > 0)
     req(is.list(input$map_bounds))
     
     ext = rev(unlist(input$map_bounds)) %>% 
@@ -235,7 +252,7 @@ server <- function(input, output, session) {
   })
   
   output$trees_total <- reactive({
-    req(plots_for_summary())
+    req(nrow(plots_for_summary()) > 0)
     
     plots_for_summary() %>%
       pull(area_acres) %>% 
@@ -246,14 +263,16 @@ server <- function(input, output, session) {
   })
   
   output$acres_years_avg <- renderText({
-    req(plots_for_summary())
+    req(nrow(plots_for_summary()) > 0)
     
-    plots_for_summary() %>%
+    res = plots_for_summary() %>%
       group_by(year) %>%
       summarize(acres = sum(area_acres), .groups = "drop") %>% 
       pull(acres) %>% 
       mean() %>% 
-      round() %>% 
+      round()
+    #if (is.na(res)) res = 0
+    res %>% 
       scales::label_comma()(.) %>% 
       paste(., "acres planted per year on average")
   })
@@ -357,6 +376,7 @@ server <- function(input, output, session) {
     bindEvent(input$x)
   
   observe({
+    req(input$map_marker_click$lat)
     if (input$map_click$lat != input$map_marker_click$lat) {
       nav_select("navset_scions", "main")
       nav_remove("navset_scions", input$map_marker_click$id)

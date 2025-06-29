@@ -10,6 +10,14 @@ source("loginAPI.R")
 
 bootswatch = "flatly"
 
+# leaflet-providers.js
+copy_text = 
+  c('&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+    '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors') %>% 
+  paste(collapse = "<br>") %>% 
+  HTML()
+
 craft_con <- dbConnect(
   RPostgres::Postgres(),
   user = dstadmin_creds$user,
@@ -102,17 +110,33 @@ make_map <- function(plots) {
   #browser()
   if (!nrow(plots)) {
     return( 
-      leaflet(ecoregions) %>% 
+      leaflet(
+        ecoregions,
+        options = leafletOptions(attributionControl = F)
+      ) %>% 
         addProviderTiles("OpenStreetMap.Mapnik") %>% 
         addPolygons(opacity = 0, fillOpacity = 0)
     )
   }
-  leaflet(plots) %>% 
-    addProviderTiles("OpenStreetMap.Mapnik") %>% 
+  leaflet(
+    plots,
+    options = leafletOptions(attributionControl = F)
+  ) %>% 
+    addProviderTiles("OpenStreetMap.Mapnik", group = "political") %>% 
+    addProviderTiles("Esri.WorldImagery", group = "aerial") %>%
+    addProviderTiles("CartoDB.PositronOnlyLabels", group = "aerial") %>%
     addCircleMarkers(
       lat = ~st_coordinates(centroid)[,2],
       lng = ~st_coordinates(centroid)[,1],
-      group = "centroids",
+      group = "centroids_aerial",
+      layerId = ~contract,
+      color = ~ifelse(!is.na(imagery), '#f1a340', '#ffffff'), #PuOr->white
+      opacity = 0.7, fillOpacity = 0.3
+    ) %>% 
+    addCircleMarkers(
+      lat = ~st_coordinates(centroid)[,2],
+      lng = ~st_coordinates(centroid)[,1],
+      group = "centroids_political",
       layerId = ~contract,
       color = ~ifelse(!is.na(imagery), '#f1a340', '#998ec3'), #PuOr
       opacity = 0.7, fillOpacity = 0.3
@@ -124,7 +148,15 @@ make_map <- function(plots) {
       color = ~ifelse(!is.na(imagery), '#f1a340', '#998ec3'), #PuOr
       opacity = 0.7, fillOpacity = 0.3
     ) %>% 
-    hideGroup("plots")
+    hideGroup("plots") %>% 
+    hideGroup("aerial") %>% 
+    hideGroup("centroids_aerial") #%>% 
+  # addEasyButton(
+  #   easyButton(
+  #     icon = icon("copyright"),
+  #     onClick = JS("function(btn, map) { map.alert('test'); }")
+  #   )
+  # )
 }
 
 make_pie <- function(dat, col_id) {
@@ -254,7 +286,7 @@ make_raster_list <- function(ct, mt) {
         
         l = leafem::addStarsImage(
           l, x = rs,    # TODO magic domain values should be dynamic for other metrics
-          colors = colorNumeric("inferno", domain = c(0,1)), 
+          colors = colorNumeric("inferno", domain = c(0,1), na.color = "#FFFFFF00"), 
           layerId = filename
         ) %>% 
           addPolygons(

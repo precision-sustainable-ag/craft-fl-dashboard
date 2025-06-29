@@ -11,6 +11,7 @@ fillable_navset_hidden <- function(..., id) {
   bslib::as_fill_carrier(panel)
 }
 
+
 vbs <- list(
   "acres_total" = value_box(
     "Total groves planted",
@@ -104,12 +105,26 @@ ui <- page_sidebar(
           layout_column_wrap(
             vbs[["acres_total"]], 
             vbs[["acres_years"]]
-            ), 
+          ), 
           value = "main"
-          )
-        ),
-      leafletOutput("map"),
-      heights_equal = "all",
+        )
+      ),
+      card(
+        card_body(
+          leafletOutput("map"),
+          absolutePanel(
+            actionButton(
+              "copyright", label = NULL, 
+              icon = icon("copyright"),
+              class = "btn-primary btn-sm"
+              ) %>% 
+              bslib::popover(copy_text),
+            bottom = 0, left = 0
+          ),
+          class = "p-0"
+        )
+      ),
+      heights_equal = "row",
       width = 1
     ),
     layout_column_wrap(
