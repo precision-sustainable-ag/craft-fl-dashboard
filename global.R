@@ -13,10 +13,23 @@ bootswatch = "flatly"
 # leaflet-providers.js
 copy_text = 
   c('&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
-    '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors') %>% 
-  paste(collapse = "<br>") %>% 
+    'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'#,
+    #'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    ) %>% 
+  paste0("<p>", ., "</p>") %>% 
+  paste(collapse = "") %>% 
   HTML()
+
+exitButton <- function(id) {
+  absolutePanel(
+    actionButton(
+      inputId = id,
+      label = bsicons::bs_icon("x-circle-fill"),
+      class = "btn-link btn-sm"
+    ),
+    top = 0, right = 0
+  )
+}
 
 craft_con <- dbConnect(
   RPostgres::Postgres(),
@@ -48,55 +61,55 @@ drone_ids <-
   tbl(craft_con, "drone_rasters") %>% 
   collect()
 
-# TODO: check these match
-# drone_outlines <- st_read("imagery/drone_outlines.geojson")
-ecoregions = st_read("fl_eco.geojson")
+drone_outlines <- read_sf("imagery/drone_outlines.geojson")
+ecoregions = read_sf("fl_eco.geojson")
 
 
 get_expunits <- function(contracts) {
-  res <- tbl(craft_con, "expunitids_view") %>% 
+  res <- tbl(craft_con, "expunitids_view") %>%
     inner_join(
-      tbl(craft_con, "contracts") %>% select(contract, year), 
+      tbl(craft_con, "contracts") %>% select(contract, year),
       by = "contract"
-      ) %>% 
+      ) %>%
     left_join(
-      tbl(craft_con, "rootstocks") %>% 
-        rename(rlabel = label) %>% 
+      tbl(craft_con, "rootstocks") %>%
+        rename(rlabel = label) %>%
         select(-uid),
       by = "rootstock"
-    ) %>% 
+    ) %>%
     left_join(
-      tbl(craft_con, "scions") %>% 
-        rename(slabel = label) %>% 
+      tbl(craft_con, "scions") %>%
+        rename(slabel = label) %>%
         select(-uid),
       by = "scion"
-    ) %>% 
+    ) %>%
     left_join(
-      tbl(craft_con, "drone_rasters") %>% 
-        distinct(contract) %>% 
+      tbl(craft_con, "drone_rasters") %>%
+        distinct(contract) %>%
         mutate(imagery = T),
       by = "contract"
     )
-  
+
   if (length(contracts)) {
-    res <- filter(res, contract %in% contracts) 
+    res <- filter(res, contract %in% contracts)
   }
 
-  res = res %>% 
-    collect() %>% 
+  res = res %>%
+    collect() %>%
     mutate(
       centroid = st_as_sfc(centroid),
       geometry = st_as_sfc(geometry)
-    ) %>% 
-    filter(!st_is_empty(centroid))%>% 
-    # mutate(centroid = centroid + runif(nrow(.), min = 0.008, max = 0.008)) %>% 
-    st_as_sf(crs = 4326) %>% 
+    ) %>%
+    filter(!st_is_empty(centroid))%>%
+    # mutate(centroid = centroid + runif(nrow(.), min = 0.008, max = 0.008)) %>%
+    st_as_sf(crs = 4326) %>%
     st_zm()
-  
-  res  
+
+  res
 }
 
-
+# local_copy = get_expunits(NULL)
+# get_expunits = function(...) { local_copy }
 
 quietly_relevel_others <- function(.f) {
   if ("Others" %in% levels(.f)) {
@@ -150,13 +163,7 @@ make_map <- function(plots) {
     ) %>% 
     hideGroup("plots") %>% 
     hideGroup("aerial") %>% 
-    hideGroup("centroids_aerial") #%>% 
-  # addEasyButton(
-  #   easyButton(
-  #     icon = icon("copyright"),
-  #     onClick = JS("function(btn, map) { map.alert('test'); }")
-  #   )
-  # )
+    hideGroup("centroids_aerial")
 }
 
 make_pie <- function(dat, col_id) {
@@ -320,11 +327,9 @@ make_raster_list <- function(ct, mt) {
 # even if not logged in, let them zoom in and see outlines
 # no login at all, just do it publicly
 # filter by county or ecoregion 
-#   (the river, the ridge, the flatwoods (east, central, west/south)) 
 #   or trialgroup
 #   across the top (in the title bar?)
 # they eventually want cost and harvest info
 # look up a scion/rs combo, get stats on them, results etc
 # look up a treatment combo, get stats, etc
 # compute trees per acre for sites with drone imagery
-# "Can we add an explanation of the difference between the NDVI and NDRE also a color legend"

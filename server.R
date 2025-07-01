@@ -4,17 +4,7 @@ library(sf)
 library(leaflet)
 library(dplyr)
 library(plotly)
-
-exitButton <- function(id) {
-  absolutePanel(
-    actionButton(
-      inputId = id,
-      label = bsicons::bs_icon("x-circle-fill"),
-      class = "btn-link btn-sm"
-    ),
-    top = 0, right = 0
-  )
-}
+library(shinyWidgets)
 
 
 colorpills = function(cols, vals) {
@@ -33,6 +23,30 @@ colorpills = function(cols, vals) {
     }) %>% 
     span(class="btn-group", role="group")
 }
+
+
+drone_imagery_explainer = 
+  div(
+    tags$p(
+      tags$a(
+        "NDVI is a measure of vegetation presence, where 0 is absent and 1 is total coverage.",
+        bsicons::bs_icon("wikipedia"), bsicons::bs_icon("box-arrow-up-right"),
+        href = "https://en.wikipedia.org/wiki/Normalized_difference_vegetation_index",
+        target="_blank",
+        class = "text-body"
+      )
+    ),
+    tags$p(
+      tags$a(
+        "NDRE is a measure of chlorophyll within vegetation, where 0 is poor and 1 is very healthy.",
+        bsicons::bs_icon("wikipedia"), bsicons::bs_icon("box-arrow-up-right"),
+        href = "https://en.wikipedia.org/wiki/Normalized_Difference_Red_Edge_Index",
+        target="_blank",
+        class = "text-body"
+      )
+    ),
+    tags$p("Tree canopy area and volume were estimated based on drone flyovers.")
+  )
 
 server <- function(input, output, session) {
   sf_use_s2(FALSE)
@@ -100,11 +114,11 @@ server <- function(input, output, session) {
     plots_for_user(), {
       req(nrow(plots_for_user()) > 0)
       updateSlimSelect(
-        inputId = "rs", 
+        inputId = "rs",
         choices = sort(unique(plots_for_user() %>% pull(rlabel)))
       )
       updateSlimSelect(
-        inputId = "sc", 
+        inputId = "sc",
         choices = sort(unique(plots_for_user() %>% pull(slabel)))
       )
     })
@@ -113,7 +127,7 @@ server <- function(input, output, session) {
     reactive({
       ret = plots_for_user()
       
-      if(length(input$eco)) {
+      if (length(input$eco)) {
         ret = ret %>% 
           purrr::quietly(st_filter)(
             ecoregions %>% filter(US_L4NAME %in% input$eco)
@@ -124,13 +138,12 @@ server <- function(input, output, session) {
       if (length(input$rs)) {
         ret = ret %>% filter(rlabel %in% input$rs)
       }
-      
+
       if (length(input$sc)) {
         ret = ret %>% filter(slabel %in% input$sc)
       }
       ret
-    }
-    )
+    })
   
   
   output$map =
@@ -144,30 +157,30 @@ server <- function(input, output, session) {
         leafletProxy("map") %>%
           setView(input$map_center[["lng"]], input$map_center[["lat"]], 14)
       }
-      
+
       if (input$map_zoom > 12 & credentials()$user_auth) {
-        leafletProxy("map") %>% 
-          hideGroup("centroids_political") %>% 
-          hideGroup("centroids_aerial") %>% 
+        leafletProxy("map") %>%
+          hideGroup("centroids_political") %>%
+          hideGroup("centroids_aerial") %>%
           showGroup("plots")
       } else {
         leafletProxy("map") %>%
           hideGroup("plots") %>%
-          showGroup("centroids_aerial") %>% 
+          showGroup("centroids_aerial") %>%
           showGroup("centroids_political")
       }
-      
+
       if (input$map_zoom > 10) {
-        leafletProxy("map") %>% 
-          hideGroup("centroids_political") %>% 
-          hideGroup("political") %>% 
-          showGroup("centroids_aerial") %>% 
+        leafletProxy("map") %>%
+          hideGroup("centroids_political") %>%
+          hideGroup("political") %>%
+          showGroup("centroids_aerial") %>%
           showGroup("aerial")
       } else {
-        leafletProxy("map") %>% 
+        leafletProxy("map") %>%
           hideGroup("centroids_aerial") %>%
-          hideGroup("aerial") %>% 
-          showGroup("centroids_political") %>% 
+          hideGroup("aerial") %>%
+          showGroup("centroids_political") %>%
           showGroup("political")
       }
     }
@@ -194,11 +207,32 @@ server <- function(input, output, session) {
       modalDialog(
         uiOutput("drone_imagery"),
         title = div(
-            tags$span("Contract: ", input$map_marker_click$id),
-            tags$span(
-              "NDVI: ", colorpills(viridis::inferno(5), (0:4)/4),
-              style = "padding-left: 50px;"
+          tags$span("Contract: ", input$map_marker_click$id),
+          tags$span(
+            "NDVI: ", colorpills(viridis::inferno(5), (0:4)/4),
+            pickerInput(
+              "drone_metric", label = NULL,
+              choices = c("NDVI" = "ndvi", "NDRE" = "ndre",
+                          "Canopy area, m<sup>2</sup>" = "area",
+                          "Canopy volume, m<sup>3</sup>" = "volume"
+              ),
+              selected = "ndvi",
+              inline = T
             ),
+            actionButton(
+              "ndvi_popup", 
+              label = bsicons::bs_icon("info-circle"),
+              class = "btn-link btn-sm",
+              "data-bs-trigger"="focus",
+              tabindex="0"
+            ) %>% 
+              popover(
+                drone_imagery_explainer, 
+                exitButton("x_metrics"), 
+                id = "metrics_popover"
+                ),
+            style = "padding-left: 50px;"
+          ),
           absolutePanel(
             div(modalButton(bsicons::bs_icon("x-circle-fill")), style = "float: right;"),
             top = 2, right = 2, width = 50, height = 50
@@ -387,6 +421,15 @@ server <- function(input, output, session) {
   }) %>%
     bindEvent(input$map_click)
   
+  observe({
+    toggle_popover("copyright_popover", show = F)
+  }) %>% 
+    bindEvent(input$x_copyright)
+  
+  observe({
+    toggle_popover("metrics_popover", show = F)
+  }) %>% 
+    bindEvent(input$x_metrics)
   
   payloads = eventReactive(
     input$contract_picker,
@@ -415,7 +458,4 @@ server <- function(input, output, session) {
 
 
 # TODO:
-# add drone images
 # finish auth
-# get all plots but fuzz them if not logged in
-#   don't show polys, but do show drone rasters separate as time series

@@ -52,7 +52,15 @@ ui <- page_sidebar(
           .ss-content .ss-search input {
             color: var(--ss-font-color);
           } 
-        }"
+        }",
+        ".dropdown-menu { --bs-dropdown-zindex: 10000; }",
+        "#drone_metric-label { display: none !important; }",
+        ".form-group { margin-bottom: 0rem; }",
+        ".popover {
+           --bs-popover-max-width: 350;
+           --bs-popover-font-size: 1rem;
+        }",
+        "button.btn-close { display: none; }"
       )
     ),  
   sidebar = sidebar(
@@ -116,9 +124,16 @@ ui <- page_sidebar(
             actionButton(
               "copyright", label = NULL, 
               icon = icon("copyright"),
-              class = "btn-primary btn-sm"
-              ) %>% 
-              bslib::popover(copy_text),
+              class = "btn-primary btn-sm",
+              tabindex = "0",
+              "data-bs-trigger"="focus"
+            ) %>% 
+              bslib::popover(
+                copy_text, 
+                exitButton("x_copyright"),
+                title = "Map layer attributions", 
+                id = "copyright_popover"
+                ),
             bottom = 0, left = 0
           ),
           class = "p-0"
