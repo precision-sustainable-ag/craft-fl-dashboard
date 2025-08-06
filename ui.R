@@ -64,15 +64,15 @@ ui <- page_sidebar(
       )
     ),  
   sidebar = sidebar(
-    shinyauthr::loginUI(
-      id = "login",
-      title = NULL,
-      user_title = "Username",
-      pass_title = "Password"
-    ),    
+    # shinyauthr::loginUI(
+    #   id = "login",
+    #   title = NULL,
+    #   user_title = "Username",
+    #   pass_title = "Password"
+    # ),    
     
-    shinyauthr::logoutUI(id = "logout"),
-    uiOutput("user_info"),
+    # shinyauthr::logoutUI(id = "logout"),
+    # uiOutput("user_info"),
     
     checkboxGroupButtons(
       "eco", "Filter by ecoregion", 

@@ -18,7 +18,7 @@ colorpills = function(cols, vals) {
         .y, 
         type = "button", 
         class = glue::glue("btn"),
-        style = glue::glue("background-color: {.x}; color: {label_col}")
+        style = glue::glue("background-color: {.x}; color: {label_col}; pointer-events: none;")
       ) 
     }) %>% 
     span(class="btn-group", role="group")
@@ -138,7 +138,7 @@ server <- function(input, output, session) {
       if (length(input$rs)) {
         ret = ret %>% filter(rlabel %in% input$rs)
       }
-
+      
       if (length(input$sc)) {
         ret = ret %>% filter(slabel %in% input$sc)
       }
@@ -150,26 +150,26 @@ server <- function(input, output, session) {
     renderLeaflet({
       make_map(plots_with_filters())
     })
-  
+
   observeEvent(
     input$map_zoom, {
       if (input$map_zoom > 14 & !credentials()$user_auth) {
         leafletProxy("map") %>%
           setView(input$map_center[["lng"]], input$map_center[["lat"]], 14)
       }
-
-      if (input$map_zoom > 12 & credentials()$user_auth) {
-        leafletProxy("map") %>%
-          hideGroup("centroids_political") %>%
-          hideGroup("centroids_aerial") %>%
-          showGroup("plots")
-      } else {
-        leafletProxy("map") %>%
-          hideGroup("plots") %>%
-          showGroup("centroids_aerial") %>%
-          showGroup("centroids_political")
-      }
-
+      
+      # if (input$map_zoom > 12 & credentials()$user_auth) {
+      #   leafletProxy("map") %>%
+      #     hideGroup("centroids_political") %>%
+      #     hideGroup("centroids_aerial") %>%
+      #     showGroup("plots")
+      # } else {
+      #   leafletProxy("map") %>%
+      #     hideGroup("plots") %>%
+      #     showGroup("centroids_aerial") %>%
+      #     showGroup("centroids_political")
+      # }
+      
       if (input$map_zoom > 10) {
         leafletProxy("map") %>%
           hideGroup("centroids_political") %>%
@@ -193,28 +193,41 @@ server <- function(input, output, session) {
   # }) %>% 
   #   bindEvent(input$map_marker_click, input$map_shape_click)
   
+  contract_clicked = 
+    reactive({ stringr::str_trim(input$map_marker_click$id) }) %>%
+    bindEvent(input$map_marker_click)
+  
   output$drone_imagery = 
     renderUI({
       req(input$map_marker_click$id)
-      make_raster_list(input$map_marker_click$id, "ndvi") %>% 
+      make_raster_list(contract_clicked(), input$drone_metric) %>% 
         leafsync::sync(ncol = 2)
     })
   
   observe({
-    imgs = drone_ids %>% filter(contract == input$map_marker_click$id)
+    imgs = drone_ids %>% filter(contract == contract_clicked())
     req(nrow(imgs) > 0)
+    # TODO: fetch quantiles or range from table given drone IDs to pass to colorpills
     showModal(
       modalDialog(
         uiOutput("drone_imagery"),
         title = div(
-          tags$span("Contract: ", input$map_marker_click$id),
+          tags$span("Contract: ", contract_clicked()),
           tags$span(
-            "NDVI: ", colorpills(viridis::inferno(5), (0:4)/4),
+            "Legend: ", colorpills(viridis::inferno(5), (0:4)/4),
             pickerInput(
               "drone_metric", label = NULL,
-              choices = c("NDVI" = "ndvi", "NDRE" = "ndre",
-                          "Canopy area, m<sup>2</sup>" = "area",
-                          "Canopy volume, m<sup>3</sup>" = "volume"
+              choices = c(
+                "NDVI" = "ndvi", "NDRE" = "ndre",
+                "Canopy area" = "area",
+                "Canopy volume" = "volume"
+              ),
+              choicesOpt = list(
+                content = c(
+                  "NDVI", "NDRE",
+                  "Canopy area, m<sup>2</sup>", 
+                  "Canopy volume, m<sup>3</sup>"
+                )
               ),
               selected = "ndvi",
               inline = T
@@ -223,14 +236,14 @@ server <- function(input, output, session) {
               "ndvi_popup", 
               label = bsicons::bs_icon("info-circle"),
               class = "btn-link btn-sm",
-              "data-bs-trigger"="focus",
+              "data-bs-trigger"="focus", # TODO: delete these two lines
               tabindex="0"
             ) %>% 
               popover(
                 drone_imagery_explainer, 
                 exitButton("x_metrics"), 
                 id = "metrics_popover"
-                ),
+              ),
             style = "padding-left: 50px;"
           ),
           absolutePanel(
@@ -352,7 +365,7 @@ server <- function(input, output, session) {
   
   output$scions_contract = renderUI({
     has_img = st_drop_geometry(plots_for_summary()) %>% 
-      filter(contract == input$map_marker_click$id) %>% 
+      filter(contract == contract_clicked()) %>% 
       pull(imagery) %>% 
       any(na.rm = T)
     
@@ -371,7 +384,7 @@ server <- function(input, output, session) {
   
   output$acres_contract = renderTable({
     plots_for_summary() %>% 
-      filter(contract == input$map_marker_click$id) %>% 
+      filter(contract == contract_clicked()) %>% 
       mutate(cofactor = replace(cofactor, is.na(cofactor) | cofactor == "NA", "")) %>% 
       select("Plot" = expunitid, "Acres" = area_acres, 
              "Scion" = slabel, "Rootstock" = rlabel,
@@ -379,11 +392,11 @@ server <- function(input, output, session) {
   })
   
   observe({
-    id = input$map_marker_click
+    id = contract_clicked()
     nav_insert(
       "navset_scions",
       nav = nav_panel_hidden(
-        value = id$id,
+        value = id,
         card(uiOutput("scions_contract"), exitButton("x"))
       ),
       select = T
@@ -391,7 +404,7 @@ server <- function(input, output, session) {
     nav_insert(
       "navset_acres",
       nav = nav_panel_hidden(
-        value = id$id,
+        value = id,
         card(tableOutput("acres_contract"), exitButton("x"))
       ),
       select = T
@@ -402,10 +415,10 @@ server <- function(input, output, session) {
   
   observe({
     nav_select("navset_scions", "main")
-    nav_remove("navset_scions", input$map_marker_click$id)
+    nav_remove("navset_scions", contract_clicked())
     
     nav_select("navset_acres", "main")
-    nav_remove("navset_acres", input$map_marker_click$id)
+    nav_remove("navset_acres", contract_clicked())
   }) %>%
     bindEvent(input$x)
   
@@ -413,10 +426,10 @@ server <- function(input, output, session) {
     req(input$map_marker_click$lat)
     if (input$map_click$lat != input$map_marker_click$lat) {
       nav_select("navset_scions", "main")
-      nav_remove("navset_scions", input$map_marker_click$id)
+      nav_remove("navset_scions", contract_clicked())
       
       nav_select("navset_acres", "main")
-      nav_remove("navset_acres", input$map_marker_click$id)
+      nav_remove("navset_acres", contract_clicked())
     }
   }) %>%
     bindEvent(input$map_click)

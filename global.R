@@ -6,6 +6,7 @@ library(sf)
 
 source("secrets.R")
 source("loginAPI.R")
+source("leaflet_helpers.R")
 
 
 bootswatch = "flatly"
@@ -131,6 +132,7 @@ make_map <- function(plots) {
         addPolygons(opacity = 0, fillOpacity = 0)
     )
   }
+  
   leaflet(
     plots,
     options = leafletOptions(attributionControl = F)
@@ -142,9 +144,9 @@ make_map <- function(plots) {
       lat = ~st_coordinates(centroid)[,2],
       lng = ~st_coordinates(centroid)[,1],
       group = "centroids_aerial",
-      layerId = ~contract,
+      layerId = ~paste(contract, " "),
       color = ~ifelse(!is.na(imagery), '#f1a340', '#ffffff'), #PuOr->white
-      opacity = 0.7, fillOpacity = 0.3
+      opacity = 0.9, fillOpacity = 0.7
     ) %>% 
     addCircleMarkers(
       lat = ~st_coordinates(centroid)[,2],
@@ -153,14 +155,14 @@ make_map <- function(plots) {
       layerId = ~contract,
       color = ~ifelse(!is.na(imagery), '#f1a340', '#998ec3'), #PuOr
       opacity = 0.7, fillOpacity = 0.3
-    ) %>% 
+    ) %>%
     addPolygons(
-      data = plots %>% select(geometry, contract, imagery), 
+      data = plots %>% select(geometry, contract, imagery),
       group = "plots",
       layerId = ~contract,
       color = ~ifelse(!is.na(imagery), '#f1a340', '#998ec3'), #PuOr
       opacity = 0.7, fillOpacity = 0.3
-    ) %>% 
+    ) %>%
     hideGroup("plots") %>% 
     hideGroup("aerial") %>% 
     hideGroup("centroids_aerial")
@@ -264,12 +266,18 @@ make_bbox_obj = function(...) {
 make_raster_list <- function(ct, mt) {
   fn_df = drone_ids %>% 
     filter(contract == ct) %>% 
-    filter(metric == "ndvi") %>%    # TODO: use `mt` here
+    filter(metric == mt) %>%
     mutate(aero_date = lubridate::as_date(aero_date)) %>% 
     arrange(aero_date) %>% 
     group_by(aero_date)
   
   ht = ifelse(n_groups(fn_df) <= 2, "84vh", "42vh")
+  
+  cols = if (mt %in% c("ndvi", "ndre")) {
+    clampedColorNumeric("inferno", domain = c(0,1), na.color = "#FFFFFF00")
+  } else {
+    colorNumeric("inferno", domain = NULL, na.color = "#FFFFFF00")
+  }
   
   dplyr::group_map(
     fn_df,
@@ -293,7 +301,7 @@ make_raster_list <- function(ct, mt) {
         
         l = leafem::addStarsImage(
           l, x = rs,    # TODO magic domain values should be dynamic for other metrics
-          colors = colorNumeric("inferno", domain = c(0,1), na.color = "#FFFFFF00"), 
+          colors = cols, 
           layerId = filename
         ) %>% 
           addPolygons(
@@ -321,9 +329,8 @@ make_raster_list <- function(ct, mt) {
 # )
 # SELECT * from expunitids where geometry && box_wkt
 # 
-# political map on main view, imagery when zoomed in
-# when clicking on contract in the map, show all the exp metadata
-#     even if not logged in
+
+
 # even if not logged in, let them zoom in and see outlines
 # no login at all, just do it publicly
 # filter by county or ecoregion 
