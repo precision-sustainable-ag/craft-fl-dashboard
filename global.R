@@ -21,6 +21,47 @@ copy_text =
   paste(collapse = "") %>% 
   HTML()
 
+drone_imagery_explainer = 
+  div(
+    tags$p(
+      tags$a(
+        "NDVI is a measure of vegetation presence, where 0 is absent and 1 is total coverage.",
+        bsicons::bs_icon("wikipedia"), bsicons::bs_icon("box-arrow-up-right"),
+        href = "https://en.wikipedia.org/wiki/Normalized_difference_vegetation_index",
+        target="_blank",
+        class = "text-body"
+      )
+    ),
+    tags$p(
+      tags$a(
+        "NDRE is a measure of chlorophyll within vegetation, where 0 is poor and 1 is very healthy.",
+        bsicons::bs_icon("wikipedia"), bsicons::bs_icon("box-arrow-up-right"),
+        href = "https://en.wikipedia.org/wiki/Normalized_Difference_Red_Edge_Index",
+        target="_blank",
+        class = "text-body"
+      )
+    ),
+    tags$p("Tree canopy area and volume were estimated based on drone flyovers.")
+  )
+
+colorpills = function(cols, vals) {
+  
+  purrr::map2(
+    cols, scales::label_number_auto()(vals), 
+    # vals %>% {sprintf("%0.2f",. )},
+    ~{
+      hcl <- farver::decode_colour(.x, "rgb", "hcl")
+      label_col <- ifelse(hcl[, "l"] > 50, "black", "white")
+      tags$button( 
+        .y, 
+        type = "button", 
+        class = glue::glue("btn"),
+        style = glue::glue("background-color: {.x}; color: {label_col}; pointer-events: none;")
+      ) 
+    }) %>% 
+    span(class="btn-group", role="group")
+}
+
 exitButton <- function(id) {
   absolutePanel(
     actionButton(

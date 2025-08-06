@@ -7,46 +7,7 @@ library(plotly)
 library(shinyWidgets)
 
 
-colorpills = function(cols, vals) {
-  
-  purrr::map2(
-    cols, vals %>% {sprintf("%0.2f",. )},
-    ~{
-      hcl <- farver::decode_colour(.x, "rgb", "hcl")
-      label_col <- ifelse(hcl[, "l"] > 50, "black", "white")
-      tags$button( 
-        .y, 
-        type = "button", 
-        class = glue::glue("btn"),
-        style = glue::glue("background-color: {.x}; color: {label_col}; pointer-events: none;")
-      ) 
-    }) %>% 
-    span(class="btn-group", role="group")
-}
 
-
-drone_imagery_explainer = 
-  div(
-    tags$p(
-      tags$a(
-        "NDVI is a measure of vegetation presence, where 0 is absent and 1 is total coverage.",
-        bsicons::bs_icon("wikipedia"), bsicons::bs_icon("box-arrow-up-right"),
-        href = "https://en.wikipedia.org/wiki/Normalized_difference_vegetation_index",
-        target="_blank",
-        class = "text-body"
-      )
-    ),
-    tags$p(
-      tags$a(
-        "NDRE is a measure of chlorophyll within vegetation, where 0 is poor and 1 is very healthy.",
-        bsicons::bs_icon("wikipedia"), bsicons::bs_icon("box-arrow-up-right"),
-        href = "https://en.wikipedia.org/wiki/Normalized_Difference_Red_Edge_Index",
-        target="_blank",
-        class = "text-body"
-      )
-    ),
-    tags$p("Tree canopy area and volume were estimated based on drone flyovers.")
-  )
 
 server <- function(input, output, session) {
   sf_use_s2(FALSE)
@@ -79,28 +40,28 @@ server <- function(input, output, session) {
   #   )
   # )
   
-  contracts_for_user =
-    eventReactive(
-      credentials()$info,
-      {
-        tbl(craft_con, "access_view") %>% 
-          filter(user_id %in% local(credentials()$info$user_id)) %>% 
-          collect() %>%
-          pull(contract) %>% 
-          unique()
-      }
-    )
-  
-  
-  output$contract_list = 
-    renderUI({
-      req(credentials()$user_auth)
-      selectInput(
-        "contract_picker",
-        "Choose a contract",
-        choices = c("", sort(contracts_for_user()))
-      )
-    })
+  # contracts_for_user =
+  #   eventReactive(
+  #     credentials()$info,
+  #     {
+  #       tbl(craft_con, "access_view") %>% 
+  #         filter(user_id %in% local(credentials()$info$user_id)) %>% 
+  #         collect() %>%
+  #         pull(contract) %>% 
+  #         unique()
+  #     }
+  #   )
+  # 
+  # 
+  # output$contract_list = 
+  #   renderUI({
+  #     req(credentials()$user_auth)
+  #     selectInput(
+  #       "contract_picker",
+  #       "Choose a contract",
+  #       choices = c("", sort(contracts_for_user()))
+  #     )
+  #   })
   
   plots_for_user = 
     eventReactive(
@@ -204,9 +165,20 @@ server <- function(input, output, session) {
         leafsync::sync(ncol = 2)
     })
   
+  output$imagery_legend = 
+    renderUI({
+      brks = if (input$drone_metric %in% c("ndvi", "ndre")) {
+        (0:4)/4
+      } else {
+        c(0, 2.5, 5, 10, 20, 40)
+      }
+      colorpills(viridis::inferno(length(brks)), brks)
+    })
+  
   observe({
     imgs = drone_ids %>% filter(contract == contract_clicked())
     req(nrow(imgs) > 0)
+    
     # TODO: fetch quantiles or range from table given drone IDs to pass to colorpills
     showModal(
       modalDialog(
@@ -214,7 +186,7 @@ server <- function(input, output, session) {
         title = div(
           tags$span("Contract: ", contract_clicked()),
           tags$span(
-            "Legend: ", colorpills(viridis::inferno(5), (0:4)/4),
+            "Legend: ", uiOutput("imagery_legend"),
             pickerInput(
               "drone_metric", label = NULL,
               choices = c(

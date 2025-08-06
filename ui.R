@@ -100,7 +100,7 @@ ui <- page_sidebar(
       placeholder = ""
     ),
     
-    uiOutput("contract_list"),
+    # uiOutput("contract_list"),
     open = F,
     width = 350
   ),
