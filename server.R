@@ -341,13 +341,17 @@ server <- function(input, output, session) {
       pull(imagery) %>% 
       any(na.rm = T)
     
+    yr = st_drop_geometry(plots_for_summary()) %>% 
+      filter(contract == contract_clicked()) %>% 
+      pull(year)
+    
     btn = actionButton(
       "show_imagery", "Show drone imagery", 
       icon = icon("map"), class = "btn-success"
     )
     
     div(
-      "Some placeholder text about dates of enrollment",
+      "Contract active since", yr[1],
       tags$hr(),
       if (has_img) { btn }
     ) %>% 
@@ -361,6 +365,10 @@ server <- function(input, output, session) {
       select("Plot" = expunitid, "Acres" = area_acres, 
              "Scion" = slabel, "Rootstock" = rlabel,
              "Trial Group" = trial_group, "Cofactor" = cofactor)
+  })
+  
+  output$rootstocks_contract = renderTable({
+    
   })
   
   observe({
@@ -378,6 +386,14 @@ server <- function(input, output, session) {
       nav = nav_panel_hidden(
         value = id,
         card(tableOutput("acres_contract"), exitButton("x"))
+      ),
+      select = T
+    )
+    nav_insert(
+      "navset_rootstocks",
+      nav = nav_panel_hidden(
+        value = id,
+        card("Harvest data", tableOutput("rootstocks_contract"), exitButton("x"))
       ),
       select = T
     )

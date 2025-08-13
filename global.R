@@ -364,20 +364,3 @@ make_raster_list <- function(ct, mt) {
     }
   )
 }
-# box_wkt = glue::glue_data(
-#   input$map_bounds,
-#   "BOX({west} {south}, {east} {north})"
-# )
-# SELECT * from expunitids where geometry && box_wkt
-# 
-
-
-# even if not logged in, let them zoom in and see outlines
-# no login at all, just do it publicly
-# filter by county or ecoregion 
-#   or trialgroup
-#   across the top (in the title bar?)
-# they eventually want cost and harvest info
-# look up a scion/rs combo, get stats on them, results etc
-# look up a treatment combo, get stats, etc
-# compute trees per acre for sites with drone imagery

@@ -149,7 +149,10 @@ ui <- page_sidebar(
         id = "navset_scions",
         nav_panel_hidden(vbs[["scions"]], value = "main")
       ), 
-      vbs[["rootstocks"]]
+      fillable_navset_hidden(
+        id = "navset_rootstocks",
+        nav_panel_hidden(vbs[["rootstocks"]], value = "main")
+      )
     )
   )
 )
