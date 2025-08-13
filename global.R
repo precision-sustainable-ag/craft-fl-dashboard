@@ -3,6 +3,7 @@ library(DBI)
 library(dplyr)
 library(plotly)
 library(sf)
+library(leaflet)
 
 source("secrets.R")
 source("loginAPI.R")
