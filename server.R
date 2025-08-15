@@ -407,6 +407,9 @@ server <- function(input, output, session) {
     
     nav_select("navset_acres", "main")
     nav_remove("navset_acres", contract_clicked())
+    
+    nav_select("navset_rootstocks", "main")
+    nav_remove("navset_rootstocks", contract_clicked())
   }) %>%
     bindEvent(input$x)
   
