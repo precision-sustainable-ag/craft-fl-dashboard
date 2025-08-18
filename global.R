@@ -179,6 +179,8 @@ make_map <- function(plots) {
     plots,
     options = leafletOptions(attributionControl = F)
   ) %>% 
+    addMapPane("centroid_markers", zIndex = 499) %>% 
+    addMapPane("plot_shapes", zIndex = 450) %>% 
     addProviderTiles("OpenStreetMap.Mapnik", group = "political") %>% 
     addProviderTiles("Esri.WorldImagery", group = "aerial") %>%
     addProviderTiles("CartoDB.PositronOnlyLabels", group = "aerial") %>%
@@ -188,7 +190,8 @@ make_map <- function(plots) {
       layerId = ~paste0(contract, ";", expunitid),
       popup = ~expunitid,
       color = ~ifelse(!is.na(imagery), '#f1a340', '#ffffff'), #PuOr
-      opacity = 0.9, fillOpacity = 0.7
+      opacity = 0.9, fillOpacity = 0.1,
+      options = pathOptions(pane = "plot_shapes")
     ) %>%
     addCircleMarkers(
       lat = ~st_coordinates(centroid)[,2],
@@ -196,7 +199,8 @@ make_map <- function(plots) {
       group = "centroids_aerial",
       layerId = ~paste(contract, " "),
       color = ~ifelse(!is.na(imagery), '#f1a340', '#ffffff'), #PuOr->white
-      opacity = 0.9, fillOpacity = 0.7
+      opacity = 0.9, fillOpacity = 0.7,
+      options = pathOptions(pane = "centroid_markers")
     ) %>% 
     addCircleMarkers(
       lat = ~st_coordinates(centroid)[,2],
@@ -204,7 +208,8 @@ make_map <- function(plots) {
       group = "centroids_political",
       layerId = ~contract,
       color = ~ifelse(!is.na(imagery), '#f1a340', '#998ec3'), #PuOr
-      opacity = 0.7, fillOpacity = 0.3
+      opacity = 0.7, fillOpacity = 0.3,
+      options = pathOptions(pane = "centroid_markers")
     ) %>%
     hideGroup("plots") %>% 
     hideGroup("aerial") %>% 
