@@ -174,7 +174,7 @@ make_map <- function(plots) {
         addPolygons(opacity = 0, fillOpacity = 0)
     )
   }
-  
+
   leaflet(
     plots,
     options = leafletOptions(attributionControl = F)
@@ -182,6 +182,14 @@ make_map <- function(plots) {
     addProviderTiles("OpenStreetMap.Mapnik", group = "political") %>% 
     addProviderTiles("Esri.WorldImagery", group = "aerial") %>%
     addProviderTiles("CartoDB.PositronOnlyLabels", group = "aerial") %>%
+    addPolygons(
+      data = plots %>% select(expunitid, geometry, contract, imagery),
+      group = "plots",
+      layerId = ~paste0(contract, ";", expunitid),
+      popup = ~expunitid,
+      color = ~ifelse(!is.na(imagery), '#f1a340', '#ffffff'), #PuOr
+      opacity = 0.9, fillOpacity = 0.7
+    ) %>%
     addCircleMarkers(
       lat = ~st_coordinates(centroid)[,2],
       lng = ~st_coordinates(centroid)[,1],
@@ -194,13 +202,6 @@ make_map <- function(plots) {
       lat = ~st_coordinates(centroid)[,2],
       lng = ~st_coordinates(centroid)[,1],
       group = "centroids_political",
-      layerId = ~contract,
-      color = ~ifelse(!is.na(imagery), '#f1a340', '#998ec3'), #PuOr
-      opacity = 0.7, fillOpacity = 0.3
-    ) %>%
-    addPolygons(
-      data = plots %>% select(geometry, contract, imagery),
-      group = "plots",
       layerId = ~contract,
       color = ~ifelse(!is.na(imagery), '#f1a340', '#998ec3'), #PuOr
       opacity = 0.7, fillOpacity = 0.3
@@ -284,8 +285,8 @@ make_bar <- function(dat, col, theme) {
       textposition = "middle right"
     ) %>% 
     plotly::layout(
-      xaxis = list(visible = F, showgrid = F, title = ""),
-      yaxis = list(visible = F, showgrid = F, title = ""),
+      xaxis = list(visible = F, showgrid = F, title = "", fixedrange = T),
+      yaxis = list(visible = F, showgrid = F, title = "", fixedrange = T),
       hovermode = NULL,
       margin = list(t = 0, r = 0, l = 0, b = 0),
       font = list(color = textcolor),

@@ -17,7 +17,8 @@ vbs <- list(
     "Total groves planted",
     value = uiOutput("acres_total"),
     theme = "primary",
-    showcase = icon("seedling")
+    #showcase_layout = "bottom",
+    showcase = tags$img(src = "craftlogo.gif", style = "width: 100%;") #icon("seedling")
   ),
   "acres_years" = value_box(
     "Enrollment over time",
@@ -40,6 +41,7 @@ vbs <- list(
 ui <- page_sidebar(
   window_title = "CRAFT Data Dashboard",
   title = div(
+    tags$img(src = "craftlogo.gif", style = "height: 2rem; vertical-align: top;"),
     span("CRAFT Data Dashboard"),
     span(input_dark_mode(id = "theme"), style = "padding-left: 50px;")
   ),
@@ -74,6 +76,15 @@ ui <- page_sidebar(
     # shinyauthr::logoutUI(id = "logout"),
     # uiOutput("user_info"),
 
+    actionButton(
+      "clear_filters",
+      "Clear all filters",
+      icon = icon("house"),
+      width = "100%",
+      disabled = T,
+      class = "btn-success"
+    ),
+    
     searchInput(
       inputId = "contract_typed",
       label = NULL, 

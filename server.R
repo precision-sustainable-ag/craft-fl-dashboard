@@ -107,25 +107,46 @@ server <- function(input, output, session) {
       if (input$contract_typed != "") {
         ret = ret %>% filter(
           contract %in% tolower(stringr::str_trim(input$contract_typed))
-          )
+        )
       }
       
       
       ret
     })
   
+  observe({
+    filter_flags = c(length(input$eco), length(input$rs), 
+                     length(input$sc), input$contract_typed != "")
+    if (any(filter_flags)) {
+      updateActionButton(inputId = "clear_filters", disabled = F, )
+    } else  {
+      updateActionButton(inputId = "clear_filters", disabled = T)
+    }
+  })
+  
+  observe({
+    updateCheckboxGroupButtons(inputId = "eco", selected = character(0))
+    updateSlimSelect(inputId = "sc", selected = character(0))
+    updateSlimSelect(inputId = "rs", selected = character(0))
+    updateSearchInput(
+      session = getDefaultReactiveDomain(),
+      inputId = "contract_typed", value = "", trigger = T
+    )
+  }) %>% 
+    bindEvent(input$clear_filters)
+  
   
   output$map =
     renderLeaflet({
       make_map(plots_with_filters())
     })
-
+  
   observeEvent(
     input$map_zoom, {
-      if (input$map_zoom > 14 & !credentials()$user_auth) {
-        leafletProxy("map") %>%
-          setView(input$map_center[["lng"]], input$map_center[["lat"]], 14)
-      }
+      # if (input$map_zoom > 14 & !credentials()$user_auth) {
+      #   leafletProxy("map") %>%
+      #     setView(input$map_center[["lng"]], input$map_center[["lat"]], 14)
+      # }
       
       # if (input$map_zoom > 12 & credentials()$user_auth) {
       #   leafletProxy("map") %>%
@@ -144,11 +165,13 @@ server <- function(input, output, session) {
           hideGroup("centroids_political") %>%
           hideGroup("political") %>%
           showGroup("centroids_aerial") %>%
-          showGroup("aerial")
+          showGroup("aerial") %>% 
+          showGroup("plots")
       } else {
         leafletProxy("map") %>%
           hideGroup("centroids_aerial") %>%
-          hideGroup("aerial") %>%
+          hideGroup("aerial") %>% 
+          hideGroup("plots") %>%
           showGroup("centroids_political") %>%
           showGroup("political")
       }
@@ -162,9 +185,25 @@ server <- function(input, output, session) {
   # }) %>% 
   #   bindEvent(input$map_marker_click, input$map_shape_click)
   
-  contract_clicked = 
-    reactive({ stringr::str_trim(input$map_marker_click$id) }) %>%
+  observe({
+    leafletProxy("map") %>% 
+      setView(input$map_marker_click$lng, input$map_marker_click$lat, 16) 
+  }) %>% 
     bindEvent(input$map_marker_click)
+  
+  contract_clicked = 
+    reactive({ 
+      markerid = stringr::str_trim(input$map_marker_click$id) 
+      plotid = stringr::str_extract(input$map_shape_click$id, "^.+;") %>% 
+        stringr::str_remove(";")
+      
+      if (length(plotid) && plotid != "" && input$map_zoom > 15) { 
+        plotid 
+      } else { 
+        markerid 
+      }
+    }) %>%
+    bindEvent(input$map_marker_click, input$map_shape_click)
   
   output$drone_imagery = 
     renderUI({
@@ -205,7 +244,7 @@ server <- function(input, output, session) {
               choicesOpt = list(
                 content = c(
                   "NDVI", "NDRE"#,
-                 # "Canopy area, m<sup>2</sup>", 
+                  # "Canopy area, m<sup>2</sup>", 
                   #"Canopy volume, m<sup>3</sup>"
                 )
               ),
@@ -239,10 +278,10 @@ server <- function(input, output, session) {
   }) %>% 
     bindEvent(input$show_imagery)
   
-  observeEvent(
-    input$map_shape_click, {
-      message(jsonlite::toJSON(input$map_shape_click, pretty = T))
-    }) 
+  # observeEvent(
+  #   input$map_shape_click, {
+  #     message(jsonlite::toJSON(input$map_shape_click, pretty = T))
+  #   }) 
   
   plots_for_summary <- reactive({
     req(nrow(plots_with_filters()) > 0)
@@ -320,8 +359,8 @@ server <- function(input, output, session) {
         name = ""
       ) %>%
       plotly::layout(
-        xaxis = list(visible = F, showgrid = F, title = ""),
-        yaxis = list(visible = F, showgrid = F, title = ""),
+        xaxis = list(visible = F, showgrid = F, title = "", fixedrange = T),
+        yaxis = list(visible = F, showgrid = F, title = "", fixedrange = T),
         hovermode = "x",
         margin = list(t = 0, r = 0, l = 0, b = 0),
         font = list(color = "white"),
@@ -359,7 +398,7 @@ server <- function(input, output, session) {
     )
     
     div(
-      "Contract active since", yr[1],
+      "Contract", contract_clicked(), "active since", yr[1],
       tags$hr(),
       if (has_img) { btn }
     ) %>% 
@@ -423,7 +462,7 @@ server <- function(input, output, session) {
   
   observe({
     req(input$map_marker_click$lat)
-    if (input$map_click$lat != input$map_marker_click$lat) {
+    if (input$map_click$lat != input$map_marker_click$lat & input$map_zoom < 16) {
       nav_select("navset_scions", "main")
       nav_remove("navset_scions", contract_clicked())
       
