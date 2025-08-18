@@ -41,8 +41,8 @@ drone_imagery_explainer =
         target="_blank",
         class = "text-body"
       )
-    ),
-    tags$p("Tree canopy area and volume were estimated based on drone flyovers.")
+    )#,
+    #tags$p("Tree canopy area and volume were estimated based on drone flyovers.")
   )
 
 colorpills = function(cols, vals) {
