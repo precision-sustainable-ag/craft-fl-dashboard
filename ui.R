@@ -17,6 +17,7 @@ vbs <- list(
     "Total groves planted",
     value = uiOutput("acres_total"),
     theme = "primary",
+    #showcase_layout = "bottom",
     showcase = tags$img(src = "craftlogo.gif", style = "width: 100%;") #icon("seedling")
   ),
   "acres_years" = value_box(
