@@ -177,31 +177,26 @@ server <- function(input, output, session) {
       }
     }
   )
-  # TODO combine click events
-  # contract_clicked = reactive({
-  #   if (is.null(input$map_marker_click$id)) return( input$map_shape_click$id )
-  #   if (is.null(input$map_shape_click$id)) return( input$map_marker_click$id )
-  #   NULL
-  # }) %>% 
-  #   bindEvent(input$map_marker_click, input$map_shape_click)
   
   observe({
     leafletProxy("map") %>% 
       setView(input$map_marker_click$lng, input$map_marker_click$lat, 16) 
   }) %>% 
     bindEvent(input$map_marker_click)
-  
+  # TODO: diagram this logic
   contract_clicked = 
     reactive({ 
       markerid = stringr::str_trim(input$map_marker_click$id) 
-      plotid = stringr::str_extract(input$map_shape_click$id, "^.+;") %>% 
-        stringr::str_remove(";")
-      
-      if (length(plotid) && plotid != "" && input$map_zoom > 15) { 
-        plotid 
-      } else { 
+      # plotid = stringr::str_extract(input$map_shape_click$id, "^.+;") %>% 
+      #   stringr::str_remove(";")
+      # message(jsonlite::toJSON(list(markerid = markerid, plotid = plotid), pretty = T))
+      # if (length(input$contract_typed) && nchar(input$contract_typed)) {
+      #   tolower(stringr::str_trim(input$contract_typed))
+      # } else if (length(plotid) && plotid != "" && input$map_zoom >= 15) { 
+      #   plotid 
+      # } else { 
         markerid 
-      }
+      #}
     }) %>%
     bindEvent(input$map_marker_click, input$map_shape_click)
   
@@ -277,11 +272,6 @@ server <- function(input, output, session) {
     )
   }) %>% 
     bindEvent(input$show_imagery)
-  
-  # observeEvent(
-  #   input$map_shape_click, {
-  #     message(jsonlite::toJSON(input$map_shape_click, pretty = T))
-  #   }) 
   
   plots_for_summary <- reactive({
     req(nrow(plots_with_filters()) > 0)
@@ -383,12 +373,12 @@ server <- function(input, output, session) {
   })
   
   output$scions_contract = renderUI({
-    has_img = st_drop_geometry(plots_for_summary()) %>% 
+    has_img = st_drop_geometry(plots_for_user()) %>% 
       filter(contract == contract_clicked()) %>% 
       pull(imagery) %>% 
       any(na.rm = T)
     
-    yr = st_drop_geometry(plots_for_summary()) %>% 
+    yr = st_drop_geometry(plots_for_user()) %>% 
       filter(contract == contract_clicked()) %>% 
       pull(year)
     
@@ -406,7 +396,7 @@ server <- function(input, output, session) {
   })
   
   output$acres_contract = renderTable({
-    plots_for_summary() %>% 
+    st_drop_geometry(plots_for_user()) %>% 
       filter(contract == contract_clicked()) %>% 
       mutate(cofactor = replace(cofactor, is.na(cofactor) | cofactor == "NA", "")) %>% 
       select("Plot" = expunitid, "Acres" = area_acres, 
