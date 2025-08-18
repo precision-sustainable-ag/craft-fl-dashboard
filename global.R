@@ -284,8 +284,8 @@ make_bar <- function(dat, col, theme) {
       textposition = "middle right"
     ) %>% 
     plotly::layout(
-      xaxis = list(visible = F, showgrid = F, title = ""),
-      yaxis = list(visible = F, showgrid = F, title = ""),
+      xaxis = list(visible = F, showgrid = F, title = "", fixedrange = T),
+      yaxis = list(visible = F, showgrid = F, title = "", fixedrange = T),
       hovermode = NULL,
       margin = list(t = 0, r = 0, l = 0, b = 0),
       font = list(color = textcolor),

@@ -114,6 +114,27 @@ server <- function(input, output, session) {
       ret
     })
   
+  observe({
+    filter_flags = c(length(input$eco), length(input$rs), 
+                     length(input$sc), input$contract_typed != "")
+    if (any(filter_flags)) {
+      updateActionButton(inputId = "clear_filters", disabled = F, )
+    } else  {
+      updateActionButton(inputId = "clear_filters", disabled = T)
+    }
+  })
+  
+  observe({
+    updateCheckboxGroupButtons(inputId = "eco", selected = character(0))
+    updateSlimSelect(inputId = "sc", selected = character(0))
+    updateSlimSelect(inputId = "rs", selected = character(0))
+    updateSearchInput(
+      session = getDefaultReactiveDomain(),
+      inputId = "contract_typed", value = "", trigger = T
+      )
+  }) %>% 
+    bindEvent(input$clear_filters)
+  
   
   output$map =
     renderLeaflet({
@@ -320,8 +341,8 @@ server <- function(input, output, session) {
         name = ""
       ) %>%
       plotly::layout(
-        xaxis = list(visible = F, showgrid = F, title = ""),
-        yaxis = list(visible = F, showgrid = F, title = ""),
+        xaxis = list(visible = F, showgrid = F, title = "", fixedrange = T),
+        yaxis = list(visible = F, showgrid = F, title = "", fixedrange = T),
         hovermode = "x",
         margin = list(t = 0, r = 0, l = 0, b = 0),
         font = list(color = "white"),
