@@ -73,6 +73,15 @@ ui <- page_sidebar(
     
     # shinyauthr::logoutUI(id = "logout"),
     # uiOutput("user_info"),
+
+    searchInput(
+      inputId = "contract_typed",
+      label = NULL, 
+      placeholder = "Search by contract",
+      btnSearch = icon("magnifying-glass"), 
+      btnReset = icon("xmark"),
+      width = "100%"
+    ),
     
     checkboxGroupButtons(
       "eco", "Filter by ecoregion", 

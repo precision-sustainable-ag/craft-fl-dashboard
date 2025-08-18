@@ -103,6 +103,14 @@ server <- function(input, output, session) {
       if (length(input$sc)) {
         ret = ret %>% filter(slabel %in% input$sc)
       }
+      
+      if (input$contract_typed != "") {
+        ret = ret %>% filter(
+          contract %in% tolower(stringr::str_trim(input$contract_typed))
+          )
+      }
+      
+      
       ret
     })
   
@@ -190,15 +198,15 @@ server <- function(input, output, session) {
             pickerInput(
               "drone_metric", label = NULL,
               choices = c(
-                "NDVI" = "ndvi", "NDRE" = "ndre",
-                "Canopy area" = "area",
-                "Canopy volume" = "volume"
+                "NDVI" = "ndvi", "NDRE" = "ndre"#,
+                #"Canopy area" = "area",
+                #"Canopy volume" = "volume"
               ),
               choicesOpt = list(
                 content = c(
-                  "NDVI", "NDRE",
-                  "Canopy area, m<sup>2</sup>", 
-                  "Canopy volume, m<sup>3</sup>"
+                  "NDVI", "NDRE"#,
+                 # "Canopy area, m<sup>2</sup>", 
+                  #"Canopy volume, m<sup>3</sup>"
                 )
               ),
               selected = "ndvi",
@@ -421,6 +429,9 @@ server <- function(input, output, session) {
       
       nav_select("navset_acres", "main")
       nav_remove("navset_acres", contract_clicked())
+      
+      nav_select("navset_rootstocks", "main")
+      nav_remove("navset_rootstocks", contract_clicked())
     }
   }) %>%
     bindEvent(input$map_click)
