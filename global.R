@@ -17,7 +17,7 @@ copy_text =
   c('&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
     'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'#,
     #'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-    ) %>% 
+  ) %>% 
   paste0("<p>", ., "</p>") %>% 
   paste(collapse = "") %>% 
   HTML()
@@ -74,15 +74,16 @@ exitButton <- function(id) {
   )
 }
 
-craft_con <- dbConnect(
-  RPostgres::Postgres(),
-  user = dstadmin_creds$user,
-  password = dstadmin_creds$password,
-  host = dstadmin_creds$host,
-  dbname = dstadmin_creds$dbname,
-  sslmode = "require"
-)
-
+make_connection = function(creds) {
+  DBI::dbConnect(
+    RPostgres::Postgres(),
+    user = creds$user,
+    password = creds$password,
+    host = creds$host,
+    dbname = creds$dbname,
+    sslmode = "require"
+  )
+}
 
 # forms_con <- dbConnect(
 #   RPostgres::Postgres(),
@@ -93,27 +94,36 @@ craft_con <- dbConnect(
 #   sslmode = "require"
 # )
 
-user_base <- 
-  tbl(craft_con, "access_view") %>% 
-  select(user_id) %>% 
-  distinct() %>% 
-  collect() %>% 
-  mutate(password_dummy = "")
+# user_base <- 
+#   tbl(craft_con, "access_view") %>% 
+#   select(user_id) %>% 
+#   distinct() %>% 
+#   collect() %>% 
+#   mutate(password_dummy = "")
 
-drone_ids <- 
-  tbl(craft_con, "drone_rasters") %>% 
-  collect()
 
 drone_outlines <- read_sf("imagery/drone_outlines.geojson")
 ecoregions = read_sf("fl_eco.geojson")
 
 
-get_expunits <- function(contracts) {
+get_expunits <- function(creds) {
+  path = "cache/expunits.geojson"
+  if (file.exists(path) && file.info(path)$mtime > Sys.time() - 5*60) {
+    return(NULL)
+  }
+  
+  dir.create("cache", showWarnings = F)
+  
+  craft_con = make_connection(creds)
+  on.exit(DBI::dbDisconnect(craft_con))
+  library(dplyr)
+  library(sf)
+
   res <- tbl(craft_con, "expunitids_view") %>%
     inner_join(
       tbl(craft_con, "contracts") %>% select(contract, year),
       by = "contract"
-      ) %>%
+    ) %>%
     left_join(
       tbl(craft_con, "rootstocks") %>%
         rename(rlabel = label) %>%
@@ -132,11 +142,7 @@ get_expunits <- function(contracts) {
         mutate(imagery = T),
       by = "contract"
     )
-
-  if (length(contracts)) {
-    res <- filter(res, contract %in% contracts)
-  }
-
+  
   res = res %>%
     collect() %>%
     mutate(
@@ -148,11 +154,27 @@ get_expunits <- function(contracts) {
     st_as_sf(crs = 4326) %>%
     st_zm()
 
-  res
+  st_write(res, path, delete_dsn = T)
+  
+  drone_ids =
+    tbl(craft_con, "drone_rasters") %>% 
+    collect()
+  readr::write_csv(drone_ids, "cache/drone_ids.csv")
 }
 
-# local_copy = get_expunits(NULL)
-# get_expunits = function(...) { local_copy }
+fetch_expunits = function() {
+  path = "cache/expunits.geojson"
+  if (!file.exists(path)) { return(NULL) }
+  st_read(path, quiet = T)
+}
+
+
+fetch_drone_ids = function() {
+  path = "cache/drone_ids.csv"
+  if (!file.exists(path)) { return(NULL) }
+  readr::read_csv(path, show_col_types = FALSE)
+}
+
 
 quietly_relevel_others <- function(.f) {
   if ("Others" %in% levels(.f)) {
@@ -174,7 +196,9 @@ make_map <- function(plots) {
         addPolygons(opacity = 0, fillOpacity = 0)
     )
   }
-
+  plots = plots %>% 
+    mutate(centroid = st_centroid(geometry))
+  
   leaflet(
     plots,
     options = leafletOptions(attributionControl = F)
