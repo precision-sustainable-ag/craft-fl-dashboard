@@ -11,12 +11,8 @@ future::plan("multisession")
 
 
 
-
 server <- function(input, output, session) {
   sf_use_s2(FALSE)
-  # my_id = reactive(
-  #   paste(input$httpbin[["origin"]], uuid::UUIDgenerate(), sep = "__")
-  #   )
   my_id = uuid::UUIDgenerate()
   telemetry$start_session(
     track_values = T,
