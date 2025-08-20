@@ -5,6 +5,8 @@ library(leaflet)
 library(dplyr)
 library(plotly)
 library(shinyWidgets)
+library(promises)
+future::plan("multisession")
 
 
 
@@ -13,25 +15,25 @@ server <- function(input, output, session) {
   sf_use_s2(FALSE)
   # call login module supplying data frame, 
   # user and password cols and reactive trigger
-  credentials <- loginAPI(
-    id = "login",
-    data = user_base,
-    user_col = user_id,
-    pwd_col = password_dummy,
-    log_out = reactive(logout_init())
-  )
+  # credentials <- loginAPI(
+  #   id = "login",
+  #   data = user_base,
+  #   user_col = user_id,
+  #   pwd_col = password_dummy,
+  #   log_out = reactive(logout_init())
+  # )
   # 
   # # call the logout module with reactive trigger to hide/show
-  logout_init <- shinyauthr::logoutServer(
-    id = "logout",
-    active = reactive(credentials()$user_auth)
-  )
-  
-  output$user_info <- renderUI({
-    if (credentials()$user_auth) {
-      span( icon("user"), tags$strong(credentials()$info$user_id) )
-    }
-  })
+  # logout_init <- shinyauthr::logoutServer(
+  #   id = "logout",
+  #   active = reactive(credentials()$user_auth)
+  # )
+  # 
+  # output$user_info <- renderUI({
+  #   if (credentials()$user_auth) {
+  #     span( icon("user"), tags$strong(credentials()$info$user_id) )
+  #   }
+  # })
   
   # credentials = reactive(
   #   list(
@@ -63,11 +65,19 @@ server <- function(input, output, session) {
   #     )
   #   })
   
+  mirai::mirai(
+    get_expunits(creds = dstadmin_creds),
+    get_expunits = get_expunits,
+    dstadmin_creds = dstadmin_creds,
+    make_connection = make_connection
+    ) %...>%
+    (function(result) {})
+  
   plots_for_user = 
     eventReactive(
       1, #credentials()$user_auth,
       {
-        get_expunits(NULL)
+        fetch_expunits()
       }
     )
   
@@ -195,7 +205,7 @@ server <- function(input, output, session) {
       # } else if (length(plotid) && plotid != "" && input$map_zoom >= 15) { 
       #   plotid 
       # } else { 
-        markerid 
+      markerid 
       #}
     }) %>%
     bindEvent(input$map_marker_click, input$map_shape_click)
@@ -217,8 +227,11 @@ server <- function(input, output, session) {
       colorpills(viridis::inferno(length(brks)), brks)
     })
   
+  drone_ids = reactive(fetch_drone_ids()) %>% 
+    bindEvent(input$map_click, once = T)
+  
   observe({
-    imgs = drone_ids %>% filter(contract == contract_clicked())
+    imgs = drone_ids() %>% filter(contract == contract_clicked())
     req(nrow(imgs) > 0)
     
     # TODO: fetch quantiles or range from table given drone IDs to pass to colorpills
