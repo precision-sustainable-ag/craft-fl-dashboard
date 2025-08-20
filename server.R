@@ -213,7 +213,7 @@ server <- function(input, output, session) {
   output$drone_imagery = 
     renderUI({
       req(input$map_marker_click$id)
-      make_raster_list(contract_clicked(), input$drone_metric) %>% 
+      make_raster_list(drone_ids(), contract_clicked(), input$drone_metric) %>% 
         leafsync::sync(ncol = 2)
     })
   
