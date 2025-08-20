@@ -39,6 +39,14 @@ vbs <- list(
 
 
 ui <- page_sidebar(
+  shiny.telemetry::use_telemetry(),
+#   tags$script('
+#   $(document).ready(function(){
+#   $.get("https://httpbin.org/get", function(response) {
+#     Shiny.onInputChange("httpbin", response);
+#   }, "json");
+# });
+#   '),
   window_title = "CRAFT Data Dashboard",
   title = div(
     tags$img(src = "craftlogo.gif", style = "height: 2rem; vertical-align: top;"),
@@ -75,7 +83,7 @@ ui <- page_sidebar(
     
     # shinyauthr::logoutUI(id = "logout"),
     # uiOutput("user_info"),
-
+    
     actionButton(
       "clear_filters",
       "Clear all filters",
@@ -153,7 +161,7 @@ ui <- page_sidebar(
                 exitButton("x_copyright"),
                 title = "Map layer attributions", 
                 id = "copyright_popover"
-                ),
+              ),
             bottom = 0, left = 0
           ),
           class = "p-0"
