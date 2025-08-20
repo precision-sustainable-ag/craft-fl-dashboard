@@ -335,8 +335,8 @@ make_bbox_obj = function(...) {
   st_bbox(...) %>% st_as_sfc() %>% st_transform(4326)
 }
 
-make_raster_list <- function(ct, mt) {
-  fn_df = drone_ids %>% 
+make_raster_list <- function(ids, ct, mt) {
+  fn_df = ids %>% 
     filter(contract == ct) %>% 
     filter(metric == mt) %>%
     mutate(aero_date = lubridate::as_date(aero_date)) %>% 
