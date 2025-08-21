@@ -4,6 +4,7 @@ library(dplyr)
 library(plotly)
 library(sf)
 library(leaflet)
+library(shiny.telemetry)
 
 source("secrets.R")
 source("loginAPI.R")
@@ -11,6 +12,24 @@ source("leaflet_helpers.R")
 
 
 bootswatch = "flatly"
+
+if (exists("env") && env == "local") {
+  telemetry = Telemetry$new(
+    data_storage = DataStorageSQLite$new("event_log.sqlite")
+  )
+} else {
+  telemetry = Telemetry$new(
+    data_storage = DataStoragePostgreSQL$new(
+      username = dstadmin_creds$user,
+      password = dstadmin_creds$password,
+      hostname = dstadmin_creds$host,
+      port = dstadmin_creds$port,
+      dbname = "dev_craft_v2_main",
+      driver = "RPostgres"
+    )
+  )
+}
+
 
 # leaflet-providers.js
 copy_text = 
@@ -41,8 +60,8 @@ drone_imagery_explainer =
         target="_blank",
         class = "text-body"
       )
-    )#,
-    #tags$p("Tree canopy area and volume were estimated based on drone flyovers.")
+    ),
+    tags$p("Tree canopy area and volume were estimated based on drone flyovers.")
   )
 
 colorpills = function(cols, vals) {
@@ -118,7 +137,7 @@ get_expunits <- function(creds) {
   on.exit(DBI::dbDisconnect(craft_con))
   library(dplyr)
   library(sf)
-
+  
   res <- tbl(craft_con, "expunitids_view") %>%
     inner_join(
       tbl(craft_con, "contracts") %>% select(contract, year),
@@ -153,7 +172,7 @@ get_expunits <- function(creds) {
     # mutate(centroid = centroid + runif(nrow(.), min = 0.008, max = 0.008)) %>%
     st_as_sf(crs = 4326) %>%
     st_zm()
-
+  
   st_write(res, path, delete_dsn = T)
   
   drone_ids =
@@ -348,7 +367,7 @@ make_raster_list <- function(ids, ct, mt) {
   cols = if (mt %in% c("ndvi", "ndre")) {
     clampedColorNumeric("inferno", domain = c(0,1), na.color = "#FFFFFF00")
   } else {
-    colorNumeric("inferno", domain = NULL, na.color = "#FFFFFF00")
+    binnedColorNumeric("inferno", bins = c(0, 2.5, 5, 10, 20, Inf), na.color = "#FFFFFF00")
   }
   
   dplyr::group_map(
@@ -368,7 +387,9 @@ make_raster_list <- function(ids, ct, mt) {
         rs = stars::read_stars(file.path("imagery", filename))
         bb_ = rs %>% make_bbox_obj() 
         bb = quietly_st_union(bb, bb_) %>% make_bbox_obj()
-        outline = drone_outlines %>% filter(fn == filename)
+        outline = 
+          drone_outlines %>% 
+          filter(fn == stringr::str_extract(filename, "^[0-9]+_"))
         eu = filter(.x, fn == filename) %>% pull(expunitid)
         
         l = leafem::addStarsImage(

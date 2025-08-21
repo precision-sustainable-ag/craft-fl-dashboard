@@ -6,13 +6,19 @@ library(dplyr)
 library(plotly)
 library(shinyWidgets)
 library(promises)
+library(shiny.telemetry)
 future::plan("multisession")
-
 
 
 
 server <- function(input, output, session) {
   sf_use_s2(FALSE)
+
+  telemetry$start_session(
+    track_values = T,
+    track_anonymous_user = F, 
+    username = uuid::UUIDgenerate()
+  )
   # call login module supplying data frame, 
   # user and password cols and reactive trigger
   # credentials <- loginAPI(
@@ -224,7 +230,11 @@ server <- function(input, output, session) {
       } else {
         c(0, 2.5, 5, 10, 20, 40)
       }
-      colorpills(viridis::inferno(length(brks)), brks)
+      tags$span(
+        HTML("Legend:&nbsp;"), 
+        colorpills(viridis::inferno(length(brks)), brks),
+        style="white-space: nowrap;"
+        )
     })
   
   drone_ids = reactive(fetch_drone_ids()) %>% 
@@ -241,19 +251,19 @@ server <- function(input, output, session) {
         title = div(
           tags$span("Contract: ", contract_clicked()),
           tags$span(
-            "Legend: ", uiOutput("imagery_legend"),
+            uiOutput("imagery_legend"),
             pickerInput(
               "drone_metric", label = NULL,
               choices = c(
-                "NDVI" = "ndvi", "NDRE" = "ndre"#,
-                #"Canopy area" = "area",
-                #"Canopy volume" = "volume"
+                "NDVI" = "ndvi", "NDRE" = "ndre",
+                "Canopy area" = "area",
+                "Canopy volume" = "volume"
               ),
               choicesOpt = list(
                 content = c(
-                  "NDVI", "NDRE"#,
-                  # "Canopy area, m<sup>2</sup>", 
-                  #"Canopy volume, m<sup>3</sup>"
+                  "NDVI", "NDRE",
+                  "Canopy area, m<sup>2</sup>", 
+                  "Canopy volume, m<sup>3</sup>"
                 )
               ),
               selected = "ndvi",

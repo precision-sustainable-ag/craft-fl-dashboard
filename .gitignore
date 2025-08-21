@@ -6,6 +6,7 @@
 secrets.R
 /imagery
 /cache
+*.sqlite
 
 # Created by https://www.toptal.com/developers/gitignore/api/r,macos,windows
 # Edit at https://www.toptal.com/developers/gitignore?templates=r,macos,windows
