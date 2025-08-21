@@ -60,8 +60,8 @@ drone_imagery_explainer =
         target="_blank",
         class = "text-body"
       )
-    )#,
-    #tags$p("Tree canopy area and volume were estimated based on drone flyovers.")
+    ),
+    tags$p("Tree canopy area and volume were estimated based on drone flyovers.")
   )
 
 colorpills = function(cols, vals) {
@@ -367,7 +367,7 @@ make_raster_list <- function(ids, ct, mt) {
   cols = if (mt %in% c("ndvi", "ndre")) {
     clampedColorNumeric("inferno", domain = c(0,1), na.color = "#FFFFFF00")
   } else {
-    colorNumeric("inferno", domain = NULL, na.color = "#FFFFFF00")
+    binnedColorNumeric("inferno", bins = c(0, 2.5, 5, 10, 20, Inf), na.color = "#FFFFFF00")
   }
   
   dplyr::group_map(
@@ -387,7 +387,9 @@ make_raster_list <- function(ids, ct, mt) {
         rs = stars::read_stars(file.path("imagery", filename))
         bb_ = rs %>% make_bbox_obj() 
         bb = quietly_st_union(bb, bb_) %>% make_bbox_obj()
-        outline = drone_outlines %>% filter(fn == filename)
+        outline = 
+          drone_outlines %>% 
+          filter(fn == stringr::str_extract(filename, "^[0-9]+_"))
         eu = filter(.x, fn == filename) %>% pull(expunitid)
         
         l = leafem::addStarsImage(

@@ -255,15 +255,15 @@ server <- function(input, output, session) {
             pickerInput(
               "drone_metric", label = NULL,
               choices = c(
-                "NDVI" = "ndvi", "NDRE" = "ndre"#,
-                #"Canopy area" = "area",
-                #"Canopy volume" = "volume"
+                "NDVI" = "ndvi", "NDRE" = "ndre",
+                "Canopy area" = "area",
+                "Canopy volume" = "volume"
               ),
               choicesOpt = list(
                 content = c(
-                  "NDVI", "NDRE"#,
-                  # "Canopy area, m<sup>2</sup>", 
-                  #"Canopy volume, m<sup>3</sup>"
+                  "NDVI", "NDRE",
+                  "Canopy area, m<sup>2</sup>", 
+                  "Canopy volume, m<sup>3</sup>"
                 )
               ),
               selected = "ndvi",

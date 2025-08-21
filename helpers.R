@@ -10,9 +10,11 @@ drone_outlines =
   ) %>% 
   bind_rows()
 
-drone_outlines = drone_outlines %>% st_transform(4326)
+drone_outlines = 
+  drone_outlines %>% st_transform(4326) %>% 
+  mutate(fn = stringr::str_extract(fn, "^[0-9]+_"))
 
-write_sf(drone_outlines, "imagery/drone_outlines.geojson")
+write_sf(drone_outlines, "imagery/drone_outlines.geojson", delete_dsn = T)
 
 
 fl_eco_all = st_read("fl_eco_l4/fl_eco_l4.shp") %>% 
