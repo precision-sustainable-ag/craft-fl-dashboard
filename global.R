@@ -23,7 +23,7 @@ if (exists("env") && env == "local") {
       username = dstadmin_creds$user,
       password = dstadmin_creds$password,
       hostname = dstadmin_creds$host,
-      port = dstadmin_creds$port,
+      port = as.integer(dstadmin_creds$port),
       dbname = "dev_craft_v2_main",
       driver = "RPostgres"
     )
