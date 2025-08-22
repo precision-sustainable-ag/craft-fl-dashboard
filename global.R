@@ -390,7 +390,7 @@ make_raster_list <- function(ids, ct, mt) {
         pb$inc(1)
         pth = file.path("imagery", filename)
 
-        #if (!file.exists(pth)) {
+        if (!file.exists(pth)) {
           rq = GET(
             glue::glue("{blob_prefix}/{filename}"),
             write_disk(pth, overwrite = T)
@@ -399,7 +399,7 @@ make_raster_list <- function(ids, ct, mt) {
           if (http_error(rq)) {
             file.remove(pth)
           }
-        #}
+        }
         
         if (file.exists(pth)) {
           rs = stars::read_stars(pth)

@@ -249,7 +249,11 @@ server <- function(input, output, session) {
     showModal(
       modalDialog(
         uiOutput("drone_imagery") %>% 
-          shinycssloaders::withSpinner(caption = "Getting drone imagery..."),
+          shinycssloaders::withSpinner(
+            caption = "Getting drone images",
+            type = 7,
+            color = "#3498db" # manually used "info"
+            ), 
         title = div(
           tags$span("Contract: ", contract_clicked()),
           tags$span(
