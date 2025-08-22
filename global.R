@@ -215,8 +215,6 @@ make_map <- function(plots) {
         addPolygons(opacity = 0, fillOpacity = 0)
     )
   }
-  plots = plots %>% 
-    mutate(centroid = st_centroid(geometry))
   
   leaflet(
     plots,
@@ -354,6 +352,8 @@ make_bbox_obj = function(...) {
   st_bbox(...) %>% st_as_sfc() %>% st_transform(4326)
 }
 
+blob_prefix = "https://craftresources.blob.core.windows.net/fl-drone-rasters"
+
 make_raster_list <- function(ids, ct, mt) {
   fn_df = ids %>% 
     filter(contract == ct) %>% 
@@ -384,7 +384,14 @@ make_raster_list <- function(ids, ct, mt) {
       bb = st_point() %>% st_sfc(crs = 4326) 
       
       for (filename in .x$fn) {
-        rs = stars::read_stars(file.path("imagery", filename))
+        pth = file.path("imagery", filename)
+        if (!file.exists(pth)) {
+          GET(
+            glue::glue("{blob_prefix}/{filename}"),
+            write_disk(pth)
+          )
+        }
+        rs = stars::read_stars(pth)
         bb_ = rs %>% make_bbox_obj() 
         bb = quietly_st_union(bb, bb_) %>% make_bbox_obj()
         outline = 
