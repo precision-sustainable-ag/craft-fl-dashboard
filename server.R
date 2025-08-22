@@ -248,7 +248,8 @@ server <- function(input, output, session) {
     # TODO: fetch quantiles or range from table given drone IDs to pass to colorpills
     showModal(
       modalDialog(
-        uiOutput("drone_imagery"),
+        uiOutput("drone_imagery") %>% 
+          shinycssloaders::withSpinner(caption = "Getting drone imagery..."),
         title = div(
           tags$span("Contract: ", contract_clicked()),
           tags$span(
