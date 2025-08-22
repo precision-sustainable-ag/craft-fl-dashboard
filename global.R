@@ -386,30 +386,38 @@ make_raster_list <- function(ids, ct, mt) {
       for (filename in .x$fn) {
         pth = file.path("imagery", filename)
         if (!file.exists(pth)) {
-          GET(
+          rq = GET(
             glue::glue("{blob_prefix}/{filename}"),
             write_disk(pth)
           )
+          
+          if (http_error(rq)) {
+            file.remove(pth)
+          }
         }
-        rs = stars::read_stars(pth)
-        bb_ = rs %>% make_bbox_obj() 
-        bb = quietly_st_union(bb, bb_) %>% make_bbox_obj()
-        outline = 
-          drone_outlines %>% 
-          filter(fn == stringr::str_extract(filename, "^[0-9]+_"))
-        eu = filter(.x, fn == filename) %>% pull(expunitid)
         
-        l = leafem::addStarsImage(
-          l, x = rs,    # TODO magic domain values should be dynamic for other metrics
-          colors = cols, 
-          layerId = filename
-        ) %>% 
-          addPolygons(
-            data = outline, layerId = eu, popup = eu, label = eu,
-            fill = T, fillColor = "#00000000", color = "white"
-          )
+        if (file.exists(pth)) {
+          rs = stars::read_stars(pth)
+          bb_ = rs %>% make_bbox_obj() 
+          bb = quietly_st_union(bb, bb_) %>% make_bbox_obj()
+          outline = 
+            drone_outlines %>% 
+            filter(fn == stringr::str_extract(filename, "^[0-9]+_"))
+          eu = filter(.x, fn == filename) %>% pull(expunitid)
+          
+          l = leafem::addStarsImage(
+            l, x = rs,    
+            colors = cols, 
+            layerId = filename
+          ) %>% 
+            addPolygons(
+              data = outline, layerId = eu, popup = eu, label = eu,
+              fill = T, fillColor = "#00000000", color = "white"
+            )
+        }
       }
       
+      # .y here is a dataframe with the aero_date, coerced to text
       l %>% 
         addControl(tags$span(.y), position = "bottomleft") %>% 
         leafem::addHomeButton(

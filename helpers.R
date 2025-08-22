@@ -1,3 +1,21 @@
+existing_rasters = list.files("imagery", full.names = F, pattern = ".tif")
+
+rasters_to_dl = 
+  tbl(craft_con, "drone_rasters") %>% 
+  filter(!(fn %in% local(existing_rasters))) %>% 
+  pull(fn)
+
+rqs = purrr::map(
+  rasters_to_dl,
+  ~GET(
+    glue::glue("{blob_prefix}/{.x}"),
+    write_disk(file.path("imagery", .x))
+  ),
+  .progress = T
+)
+
+rqs %>% purrr::map("status_code") %>% unlist()
+
 drone_outlines = 
   list.files("imagery", full.names = T, pattern = "ndvi.tif") %>% 
   purrr::map(
