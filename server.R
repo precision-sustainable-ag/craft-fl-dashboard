@@ -13,7 +13,7 @@ future::plan("multisession")
 
 server <- function(input, output, session) {
   sf_use_s2(FALSE)
-
+  
   telemetry$start_session(
     track_values = T,
     track_anonymous_user = F, 
@@ -76,14 +76,18 @@ server <- function(input, output, session) {
     get_expunits = get_expunits,
     dstadmin_creds = dstadmin_creds,
     make_connection = make_connection
-    ) %...>%
+  ) %...>%
     (function(result) {})
   
   plots_for_user = 
     eventReactive(
       1, #credentials()$user_auth,
       {
-        fetch_expunits()
+        fetch_expunits() %>% 
+          mutate(centroid = purrr::quietly(st_centroid)(geometry)$result) %>% 
+          st_set_geometry("centroid") %>% 
+          st_join(ecoregions %>% select(US_L4NAME)) %>% 
+          st_set_geometry("geometry")
       }
     )
   
@@ -106,10 +110,7 @@ server <- function(input, output, session) {
       
       if (length(input$eco)) {
         ret = ret %>% 
-          purrr::quietly(st_filter)(
-            ecoregions %>% filter(US_L4NAME %in% input$eco)
-          ) %>% 
-          .[["result"]]
+          filter(US_L4NAME %in% input$eco)
       }
       
       if (length(input$rs)) {
@@ -234,7 +235,7 @@ server <- function(input, output, session) {
         HTML("Legend:&nbsp;"), 
         colorpills(viridis::inferno(length(brks)), brks),
         style="white-space: nowrap;"
-        )
+      )
     })
   
   drone_ids = reactive(fetch_drone_ids()) %>% 
