@@ -370,7 +370,10 @@ make_raster_list <- function(ids, ct, mt) {
     binnedColorNumeric("inferno", bins = c(0, 2.5, 5, 10, 20, Inf), na.color = "#FFFFFF00")
   }
   
-  dplyr::group_map(
+  pb = Progress$new(max = length(fn_df$fn))
+  pb$set(0, "Getting drone images")
+
+  ret = dplyr::group_map(
     fn_df,
     ~{
       
@@ -382,15 +385,17 @@ make_raster_list <- function(ids, ct, mt) {
         addProviderTiles("CartoDB.DarkMatterOnlyLabels") 
       
       bb = st_point() %>% st_sfc(crs = 4326) 
-      
+
       for (filename in .x$fn) {
+        pb$inc(1)
         pth = file.path("imagery", filename)
+
         if (!file.exists(pth)) {
           rq = GET(
             glue::glue("{blob_prefix}/{filename}"),
-            write_disk(pth)
+            write_disk(pth, overwrite = T)
           )
-          
+
           if (http_error(rq)) {
             file.remove(pth)
           }
@@ -430,4 +435,7 @@ make_raster_list <- function(ids, ct, mt) {
         )
     }
   )
+  
+  pb$close()
+  ret
 }
